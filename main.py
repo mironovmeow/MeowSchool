@@ -198,9 +198,18 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
         )
 
 
-bot.loop.run_until_complete(auth_users_from_db(
-    pickle.load(open("db.pickle", "rb"))
-))
+async def main():
+    try:
+        await auth_users_from_db(
+            pickle.load(open("db.pickle", "rb"))
+        )
+    except:
+        await auth_users_from_db(
+            pickle.load(open("db.pickle", "w+b"))
+        )
+
+
+bot.loop.run_until_complete(main())
 
 
 bot.run_forever()
