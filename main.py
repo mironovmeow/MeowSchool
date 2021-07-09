@@ -199,17 +199,19 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
 
 
 async def main():
+    await auth_users_from_db(
+        pickle.load(open("db.pickle", "rb"))
+    )
+
+if __name__ == '__main__':
     try:
-        await auth_users_from_db(
-            pickle.load(open("db.pickle", "rb"))
-        )
-    except:
-        await auth_users_from_db(
-            pickle.load(open("db.pickle", "w+b"))
-        )
+        f = open("db.pickle", "xb")
+        pickle.dump({}, f)
+        f.close()
+    except FileExistsError:
+        logger.info("Use db.pickle")
+    else:
+        logger.info("Create db.pickle")
 
-
-bot.loop.run_until_complete(main())
-
-
-bot.run_forever()
+    bot.loop.run_until_complete(main())
+    bot.run_forever()
