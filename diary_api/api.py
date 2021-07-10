@@ -1,7 +1,7 @@
 import typing
 from asyncio import get_event_loop
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector
 
 from . import diary_types
 
@@ -29,7 +29,7 @@ class DiaryApi:
         session = ClientSession(
             headers={
                 "User-Agent": "MeowApi/1 (vk.com/meow_py)"
-            }
+            }, connector=TCPConnector(ssl=False)
         )
         async with session.get(
             f'https://sosh.mon-ra.ru/rest/login?'
