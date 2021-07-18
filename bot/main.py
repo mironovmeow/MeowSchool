@@ -149,9 +149,9 @@ async def password_handler(message: Message):
         await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
 
         # todo make new db...
-        db = pickle.load(open("../db.pickle", "rb"))
+        db = pickle.load(open("db.pickle", "rb"))
         db[message.peer_id] = (login, password)
-        pickle.dump(db, open("../db.pickle", "wb"))
+        pickle.dump(db, open("db.pickle", "wb"))
 
         logger.info(f"Auth new user: @id{message.peer_id}")
         await message.answer(
@@ -200,12 +200,12 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
 
 async def main():
     await auth_users_from_db(
-        pickle.load(open("../db.pickle", "rb"))
+        pickle.load(open("db.pickle", "rb"))
     )
 
 if __name__ == '__main__':
     try:
-        f = open("../db.pickle", "xb")
+        f = open("db.pickle", "xb")
         pickle.dump({}, f)
         f.close()
     except FileExistsError:
