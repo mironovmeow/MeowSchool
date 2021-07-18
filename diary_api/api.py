@@ -1,7 +1,7 @@
 import typing
-from asyncio import get_event_loop
 
 from aiohttp import ClientSession, TCPConnector
+from loguru import logger
 
 from . import diary_types
 
@@ -35,8 +35,10 @@ class DiaryApi:
             f'https://sosh.mon-ra.ru/rest/login?'
             f'login={login}&password={password}'
         ) as r:
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
             try:
-                pupil = diary_types.LoginObject.reformat(await r.json())
+                pupil = diary_types.LoginObject.reformat(json)
             except diary_types.ApiError as error:
                 error.response = await r.text()
                 await session.close()
@@ -58,7 +60,9 @@ class DiaryApi:
                     "to_date": to_date
                 }
         ) as r:
-            return diary_types.DiaryObject.reformat(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.DiaryObject.reformat(json)
 
     async def progress_average(self, date: str):
         async with self._session.post(
@@ -68,7 +72,9 @@ class DiaryApi:
                     "date": date
                 }
         ) as r:
-            return diary_types.ProgressAverageObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.ProgressAverageObject.parse_obj(json)
 
     async def additional_materials(self, lesson_id: int):
         async with self._session.post(
@@ -78,7 +84,9 @@ class DiaryApi:
                     "lesson_id": lesson_id
                 }
         ) as r:
-            return diary_types.AdditionalMaterialsObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.AdditionalMaterialsObject.parse_obj(json)
 
     async def school_meetings(self):
         async with self._session.post(
@@ -87,7 +95,9 @@ class DiaryApi:
                     "pupil_id": self.pupil.children[0].id
                 }
         ) as r:
-            return diary_types.SchoolMeetingsObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.SchoolMeetingsObject.parse_obj(json)
 
     async def totals(self, date: str):
         async with self._session.post(
@@ -97,16 +107,17 @@ class DiaryApi:
                     "date": date
                 }
         ) as r:
-            return diary_types.TotalsObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.TotalsObject.parse_obj(json)
 
     async def check_food(self):
         async with self._session.post(
                 'https://sosh.mon-ra.ru//rest/check_food'
         ) as r:
-            # {
-            # 	"food_plugin": "NO"
-            # }
-            return diary_types.CheckFoodObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.CheckFoodObject.parse_obj(json)
 
     async def lessons_scores(self, date: str, subject: str):
         async with self._session.post(
@@ -117,18 +128,14 @@ class DiaryApi:
                     "subject": subject
                 }
         ) as r:
-            return diary_types.LessonsScoreObject.parse_obj(await r.json())
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.LessonsScoreObject.parse_obj(json)
 
     async def logout(self):
         async with self._session.post(
                 'https://sosh.mon-ra.ru/rest/logout',
         ) as r:
-            return diary_types.BaseResponse.parse_obj(await r.json())
-
-    @staticmethod
-    def run(func: typing.Callable[[], typing.Coroutine]) -> None:
-        try:
-            lp = get_event_loop()
-            lp.run_until_complete(func())
-        except Exception as e:
-            print(e.__class__.__name__, e)
+            json = await r.json()
+            logger.debug(f"Request returned {json}")
+            return diary_types.BaseResponse.parse_obj(json)

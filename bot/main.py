@@ -3,10 +3,10 @@ import os
 import pickle
 import typing
 
+from loguru import logger
 from vkbottle import GroupTypes
 from vkbottle.bot import Bot, Message, BotLabeler
 from vkbottle.dispatch.rules.bot import StateRule
-from vkbottle.modules import logger
 from vkbottle_types import BaseStateGroup
 
 import keyboards
@@ -33,12 +33,12 @@ labeler = BotLabeler(custom_rules={
     "state": StateRule
 })
 
+bot = Bot(os.environ["VK_TOKEN"], labeler=labeler)
+
 callback = Callback(custom_rules={
     "keyboard": CallbackKeyboardRule,
     "state": CallbackStateRule
-})
-
-bot = Bot(os.environ["VK_TOKEN"], labeler=labeler)
+}, state_dispenser=bot.state_dispenser)
 
 callback_handler = callback.view(bot)
 
@@ -55,7 +55,7 @@ async def auth_users_from_db(users: typing.Dict[str, typing.Tuple[str, str]]):
             logger.debug(f"Auth @id{peer_id} complete")
             count += 1
         except ApiError as e:
-            logger.warn(f"Auth @id{peer_id} failed! {e}")
+            logger.warning(f"Auth @id{peer_id} failed! {e}")
 
     logger.info(f"Auth of {count} users complete")
     return count
@@ -149,9 +149,9 @@ async def password_handler(message: Message):
         await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
 
         # todo make new db...
-        db = pickle.load(open("db.pickle", "rb"))
+        db = pickle.load(open("../db.pickle", "rb"))
         db[message.peer_id] = (login, password)
-        pickle.dump(db, open("db.pickle", "wb"))
+        pickle.dump(db, open("../db.pickle", "wb"))
 
         logger.info(f"Auth new user: @id{message.peer_id}")
         await message.answer(
@@ -187,7 +187,7 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
     if event.object.state_peer is not None and event.object.state_peer.state == AUTH:  # А вдруг?
         pass  # Кнопка не найдена
     else:
-        bot.state_dispenser.set(event.object.peer_id, AuthState.NOT_AUTH)
+        await bot.state_dispenser.set(event.object.peer_id, AuthState.NOT_AUTH)
         await bot.api.messages.send(
             peer_id=event.object.peer_id,
             message="Добро пожаловать в моего бота!\n"
@@ -200,12 +200,12 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
 
 async def main():
     await auth_users_from_db(
-        pickle.load(open("db.pickle", "rb"))
+        pickle.load(open("../db.pickle", "rb"))
     )
 
 if __name__ == '__main__':
     try:
-        f = open("db.pickle", "xb")
+        f = open("../db.pickle", "xb")
         pickle.dump({}, f)
         f.close()
     except FileExistsError:

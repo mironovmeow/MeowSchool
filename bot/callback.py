@@ -13,7 +13,8 @@ from rules import ABCCallbackRule, ABCRule
 
 
 class Callback:
-    def __init__(self, custom_rules: Dict[str, Type[ABCRule]]):
+    def __init__(self, custom_rules: Dict[str, Type[ABCRule]], state_dispenser):
+        self.state_dispenser = state_dispenser
         self.handlers: List[FromFuncHandler] = []
         self.custom_rules = custom_rules
         self.rule_config = {}
@@ -34,6 +35,7 @@ class Callback:
 
     def view(self, bot: Bot):
         async def decorate_callback_handler(event: GroupTypes.MessageEvent):
+            event.object.state_peer = await self.state_dispenser.get(event.object.peer_id)
             logger.debug("Handling event ({}) with meow callback view".format(event.object.event_id))
             for handler in self.handlers:
                 context_variables = {}

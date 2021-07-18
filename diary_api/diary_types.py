@@ -151,8 +151,8 @@ def _bar(mark: float, full: bool) -> str:  # for ProgressDataObject
 
 
 class ProgressDataObject(BaseModel):
-    total: float
-    data: Dict[str, float]  # discipline: mark
+    total: Optional[float]
+    data: Optional[Dict[str, float]]  # discipline: mark
 
     @classmethod  # fix pycharm warning
     @validator("total")
@@ -174,13 +174,17 @@ class ProgressDataObject(BaseModel):
 
 
 class ProgressAverageObject(BaseResponse):
+    kind: Optional[str]
     self: ProgressDataObject
     class_year: ProgressDataObject = Field(alias="classyear")
     level: ProgressDataObject
     sub_period: str = Field(alias="subperiod")
 
     def info(self, full: bool = False) -> str:
-        return f"{self.sub_period}\n\n{self.self.info(full)}"
+        if self.kind is None:
+            return f"{self.sub_period}\n\n{self.self.info(full)}"
+        else:
+            return self.kind
 
 
 class AdditionalMaterialsObject(BaseResponse):
