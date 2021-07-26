@@ -1,7 +1,5 @@
 import datetime
 import os
-import pickle
-import typing
 
 from loguru import logger
 from vkbottle import GroupTypes
@@ -9,6 +7,7 @@ from vkbottle.bot import Bot, Message, BotLabeler
 from vkbottle.dispatch.rules.bot import StateRule
 from vkbottle_types import BaseStateGroup
 
+import db
 import keyboards
 from callback import Callback
 from diary_api import DiaryApi, ApiError
@@ -41,24 +40,6 @@ callback = Callback(custom_rules={
 }, state_dispenser=bot.state_dispenser)
 
 callback_handler = callback.view(bot)
-
-
-# todo make new db
-async def auth_users_from_db(users: typing.Dict[str, typing.Tuple[str, str]]):
-    logger.debug("Start auth users from db")
-    count = 0
-    for peer_id in users:
-        login, password = users[peer_id]
-        try:
-            api = await DiaryApi.auth(login, password)
-            await bot.state_dispenser.set(peer_id, AUTH, api=api)
-            logger.debug(f"Auth @id{peer_id} complete")
-            count += 1
-        except ApiError as e:
-            logger.warning(f"Auth @id{peer_id} failed! {e}")
-
-    logger.info(f"Auth of {count} users complete")
-    return count
 
 
 @bot.on.message(keyboard="menu", state=AUTH)
@@ -145,13 +126,10 @@ async def password_handler(message: Message):
     login = message.state_peer.payload.get("login")
     password = message.text
     try:
-        api = await DiaryApi.auth(login, password)
+        api = await DiaryApi.auth_by_login(login, password)
         await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
 
-        # todo make new db...
-        db = pickle.load(open("db.pickle", "rb"))
-        db[message.peer_id] = (login, password)
-        pickle.dump(db, open("db.pickle", "wb"))
+        db.add_user(message.peer_id, login, password)
 
         logger.info(f"Auth new user: @id{message.peer_id}")
         await message.answer(
@@ -198,20 +176,28 @@ async def empty_callback_handler(event: GroupTypes.MessageEvent):
         )
 
 
+async def auth_users_from_db():
+    logger.debug("Start auth users from db")
+    count = 0
+    for peer_id, diary_session, login, password in db.get_users():
+        try:
+            if diary_session:
+                api = await DiaryApi.auth_by_diary_session(diary_session)
+            else:
+                api = await DiaryApi.auth_by_login(login, password)
+            await bot.state_dispenser.set(peer_id, AUTH, api=api)
+            logger.debug(f"Auth @id{peer_id} complete")
+            count += 1
+        except BaseException as e:
+            logger.warning(f"Auth @id{peer_id} failed! {e}")
+
+    logger.info(f"Auth of {count} users complete")
+    return count
+
+
 async def main():
-    await auth_users_from_db(
-        pickle.load(open("db.pickle", "rb"))
-    )
+    await auth_users_from_db()
 
 if __name__ == '__main__':
-    try:
-        f = open("db.pickle", "xb")
-        pickle.dump({}, f)
-        f.close()
-    except FileExistsError:
-        logger.info("Use db.pickle")
-    else:
-        logger.info("Create db.pickle")
-
     bot.loop.run_until_complete(main())
     bot.run_forever()

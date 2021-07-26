@@ -10,17 +10,10 @@ class ApiError(BaseException):
 
 
 class BaseResponse(BaseModel):
-    success: bool
+    success: bool  # checking in /diary_api/api.py
 
-    @classmethod  # fix pycharm warning
-    @validator("success", pre=True)
-    def check_success(cls, value, values, config, field):
-        if not value:
-            #
-            # print(cls, value, values, config, field)
-            raise ApiError("Something went wrong...")
-        return value
 
+# /rest/login
 
 class ChildObject(BaseModel):
     id: int
@@ -35,7 +28,6 @@ class LoginObject(BaseResponse):
     type: str
     fio: str
 
-    # todo придумать способ лучше
     @classmethod
     def reformat(cls, values) -> "LoginObject":
         return cls.parse_obj({
@@ -54,13 +46,15 @@ class LoginObject(BaseResponse):
         })
 
 
+# /rest/diary
+
 def _mark(marks: List[list]) -> str:  # for DiaryLessonObject.info()
     if len(marks) == 0:  # no marks
         return ""
     marks_str = ""
     for mark_list in marks[0][len(marks[0]) // 2:]:
         for mark_str in mark_list:
-            if mark_str != "":
+            if not mark_str:
                 marks_str += mark_str + "️⃣"  # use combinations of emoji
     return marks_str
 
@@ -118,6 +112,8 @@ class DiaryObject(BaseResponse):
     def info(self):
         return "\n\n".join(day.info() for day in self.days)
 
+
+# /rest/progress_average
 
 def _check_value_of_mark(value: str) -> Union[bool, float]:  # for ProgressDataObject
     if not 1.00 <= float(value) <= 5.00:
@@ -187,13 +183,19 @@ class ProgressAverageObject(BaseResponse):
             return self.kind
 
 
+# /rest/additional_materials
+
 class AdditionalMaterialsObject(BaseResponse):
     kind: Optional[str]  # 26.04.2021  todo
 
 
+# /rest/school_meetings
+
 class SchoolMeetingsObject(BaseResponse):  # please, contact with me if in your school work this function
     kind: Optional[str]
 
+
+# /rest/totals
 
 class TotalsObject(BaseResponse):  # todo how to do it
     period: str
@@ -202,6 +204,8 @@ class TotalsObject(BaseResponse):  # todo how to do it
     period_begin: str
     period_end: str
 
+
+# /lessons_scores
 
 class ScoreObject(BaseModel):  # remake
     date: str  # 2012-21-12
@@ -213,6 +217,8 @@ class LessonsScoreObject(BaseResponse):
     sub_period: str = Field(alias="subperiod")
     data: Dict[str, ScoreObject]  # lesson: ScoreObject
 
+
+# /check_food
 
 class CheckFoodObject(BaseModel):  # please, contact with me if in your school work this function
     food_plugin: str  # "NO" and maybe "YES"
