@@ -1,6 +1,6 @@
 from .api import DiaryApi
-from .diary_types import (
-    ApiError,
+from .types import (
+    APIError,
     DiaryObject,
     ProgressAverageObject,
     AdditionalMaterialsObject,

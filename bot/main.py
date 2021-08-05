@@ -10,7 +10,7 @@ from vkbottle_types import BaseStateGroup
 import db
 import keyboards
 from callback import Callback
-from diary_api import DiaryApi, ApiError
+from diary import DiaryApi, APIError
 from rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 
 
@@ -136,11 +136,14 @@ async def password_handler(message: Message):
             message="Добро пожаловать в главное меню.",
             keyboard=keyboards.menu()
         )
-    except ApiError:
-        await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-        await message.answer(
-            message="Авторизация не пройдена.\nВведите логин:"
-        )
+    except APIError as e:
+        if e.json_success is False:
+            await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+            await message.answer(
+                message="Неправильный логин или пароль. Повторите попытку\n\nВведите логин:"
+            )
+        else:
+            raise e
 
 
 @bot.on.message()

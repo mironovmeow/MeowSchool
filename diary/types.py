@@ -1,16 +1,31 @@
-from typing import Optional, List, Union, Sequence, Dict
+import typing
 
+from aiohttp import ClientResponse
 from pydantic import validator
 from pydantic.fields import Field
 from pydantic.main import BaseModel
 
 
-class ApiError(BaseException):
-    pass  # todo: maybe, add something?
+class APIError(BaseException):
+    def __init__(
+            self,
+            resp: ClientResponse,
+            json_success: typing.Optional[bool] = None,
+    ):
+        self.resp = resp
+        self.json_success = json_success
+        print(resp.request_info.url)
+
+    def __str__(self):
+        if not self.resp.ok:
+            return f"APIError [{self.resp.status}]"
+        if not self.json_success:
+            return f"APIError [{self.resp.status}] {self.resp.text()}"
+        return "APIError [undefined error]"
 
 
 class BaseResponse(BaseModel):
-    success: bool  # checking in /diary_api/api.py
+    success: bool  # checking in /diary/api.py
 
 
 # /rest/login
@@ -22,7 +37,7 @@ class ChildObject(BaseModel):
 
 
 class LoginObject(BaseResponse):
-    children: List[ChildObject]
+    children: typing.List[ChildObject]
     profile_id: int
     id: int
     type: str
@@ -48,7 +63,7 @@ class LoginObject(BaseResponse):
 
 # /rest/diary
 
-def _mark(marks: List[list]) -> str:  # for DiaryLessonObject.info()
+def _mark(marks: typing.List[list]) -> str:  # for DiaryLessonObject.info()
     if len(marks) == 0:  # no marks
         return ""
     marks_str = ""
@@ -63,14 +78,14 @@ class DiaryLessonObject(BaseModel):  # TODO
     comment: str
     discipline: str
     remark: str  # what it?  now is ''
-    attendance: Union[list, str]  # what it?  now it ['', 'Был']
+    attendance: typing.Union[list, str]  # what it?  now it ['', 'Был']
     room: str
-    next_homework: Sequence[Union[str, None]]  # first: str or none, second: ''
+    next_homework: typing.Sequence[typing.Union[str, None]]  # first: str or none, second: ''
     individual_homework: list = Field(alias="individualhomework")  # for beautiful use in code, now it []
-    marks: List[list]  # [list for marks name, list of marks]  API IS SO STUPID!!!
+    marks: typing.List[list]  # [list for marks name, list of marks]  API IS SO STUPID!!!
     date: str  # 21.12.2012 todo change to datetime
     lesson: list  # [id, str, start_time_str, end_time_str]
-    homework: List[str]
+    homework: typing.List[str]
     teacher: str
     next_individual_homework: list = Field(alias="next_individualhomework")  # check structure
     subject: str
@@ -81,9 +96,9 @@ class DiaryLessonObject(BaseModel):  # TODO
 
 
 class DiaryDayObject(BaseModel):
-    kind: Optional[str]
+    kind: typing.Optional[str]
     date: str  # todo add datetime
-    lessons: Optional[List[DiaryLessonObject]]
+    lessons: typing.Optional[typing.List[DiaryLessonObject]]
 
     def info(self) -> str:
         text = f"{self.date}\n"
@@ -95,7 +110,7 @@ class DiaryDayObject(BaseModel):
 
 
 class DiaryObject(BaseResponse):
-    days: List[DiaryDayObject]
+    days: typing.List[DiaryDayObject]
 
     @classmethod
     def reformat(cls, values) -> "DiaryObject":  # todo make it simple?
@@ -115,7 +130,7 @@ class DiaryObject(BaseResponse):
 
 # /rest/progress_average
 
-def _check_value_of_mark(value: str) -> Union[bool, float]:  # for ProgressDataObject
+def _check_value_of_mark(value: str) -> typing.Union[bool, float]:  # for ProgressDataObject
     if not 1.00 <= float(value) <= 5.00:
         return False
     return float(value)
@@ -147,8 +162,8 @@ def _bar(mark: float, full: bool) -> str:  # for ProgressDataObject
 
 
 class ProgressDataObject(BaseModel):
-    total: Optional[float]
-    data: Optional[Dict[str, float]]  # discipline: mark
+    total: typing.Optional[float]
+    data: typing.Optional[typing.Dict[str, float]]  # discipline: mark
 
     @classmethod  # fix pycharm warning
     @validator("total")
@@ -170,7 +185,7 @@ class ProgressDataObject(BaseModel):
 
 
 class ProgressAverageObject(BaseResponse):
-    kind: Optional[str]
+    kind: typing.Optional[str]
     self: ProgressDataObject
     class_year: ProgressDataObject = Field(alias="classyear")
     level: ProgressDataObject
@@ -186,21 +201,21 @@ class ProgressAverageObject(BaseResponse):
 # /rest/additional_materials
 
 class AdditionalMaterialsObject(BaseResponse):
-    kind: Optional[str]  # 26.04.2021  todo
+    kind: typing.Optional[str]  # 26.04.2021  todo
 
 
 # /rest/school_meetings
 
 class SchoolMeetingsObject(BaseResponse):  # please, contact with me if in your school work this function
-    kind: Optional[str]
+    kind: typing.Optional[str]
 
 
 # /rest/totals
 
 class TotalsObject(BaseResponse):  # todo how to do it
     period: str
-    period_types: List[str]  # ['1 Полугодие', '2 Полугодие', 'Годовая']
-    subjects: Dict[str, List[str]]  # 'Русский язык': ['4', '0', '0']
+    period_types: typing.List[str]  # ['1 Полугодие', '2 Полугодие', 'Годовая']
+    subjects: typing.Dict[str, typing.List[str]]  # 'Русский язык': ['4', '0', '0']
     period_begin: str
     period_end: str
 
@@ -209,13 +224,13 @@ class TotalsObject(BaseResponse):  # todo how to do it
 
 class ScoreObject(BaseModel):  # remake
     date: str  # 2012-21-12
-    marks: Dict[str, List[str]]  # text: [marks (str)]
+    marks: typing.Dict[str, typing.List[str]]  # text: [marks (str)]
 
 
 class LessonsScoreObject(BaseResponse):
-    kind: Optional[str]
+    kind: typing.Optional[str]
     sub_period: str = Field(alias="subperiod")
-    data: Dict[str, ScoreObject]  # lesson: ScoreObject
+    data: typing.Dict[str, ScoreObject]  # lesson: ScoreObject
 
 
 # /check_food
