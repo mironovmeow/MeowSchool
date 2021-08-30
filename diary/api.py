@@ -38,35 +38,38 @@ class DiaryApi:
 
     @classmethod
     async def auth_by_diary_session(cls, diary_session: str) -> "DiaryApi":
-        async with ClientSession(
-                headers={"User-Agent": "MeowApi/1 (vk.com/meow_py)"},
-                connector=TCPConnector(ssl=False),
-                cookies={"sessionid": diary_session}
-        ) as session:
-            async with session.get(
-                    'https://sosh.mon-ra.ru/rest/login'
-            ) as r:
-                json = await _check_response(r)
-                user = types.LoginObject.reformat(json)
-                return cls(session, user, diary_session)
+        session = ClientSession(
+            headers={
+                "User-Agent": "MeowApi/1 (vk.com/meow_py)",
+                "Connection": "keep-alive"
+            },
+            connector=TCPConnector(ssl=False),
+            cookies={"sessionid": diary_session}
+        )
+        async with session.get(
+                'https://sosh.mon-ra.ru/rest/login'
+        ) as r:
+            json = await _check_response(r)
+            user = types.LoginObject.reformat(json)
+            return cls(session, user, diary_session)
 
     @classmethod
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
-        async with ClientSession(
-                headers={"User-Agent": "MeowApi/1 (vk.com/meow_py)"},
-                connector=TCPConnector(ssl=False)
-        ) as session:
-            async with session.get(
-                    f'https://sosh.mon-ra.ru/rest/login?'
-                    f'login={login}&password={password}'
-            ) as r:
-                json = await _check_response(r)
+        session = ClientSession(
+            headers={"User-Agent": "MeowApi/1 (vk.com/meow_py)"},
+            connector=TCPConnector(ssl=False)
+        )
+        async with session.get(
+                f'https://sosh.mon-ra.ru/rest/login?'
+                f'login={login}&password={password}'
+        ) as r:
+            json = await _check_response(r)
 
-                diary_cookie = r.cookies.get("sessionid")
+            diary_cookie = r.cookies.get("sessionid")
 
-                user = types.LoginObject.reformat(json)
-                diary = cls(session, user, diary_cookie.value)
-                return diary
+            user = types.LoginObject.reformat(json)
+            diary = cls(session, user, diary_cookie.value)
+            return diary
 
     async def diary(self, from_date: str, to_date: typing.Union[str, None] = None):
         if to_date is None:
