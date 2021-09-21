@@ -69,7 +69,7 @@ def _mark(marks: typing.List[list]) -> str:  # for DiaryLessonObject.info()
     marks_str = ""
     for mark_list in marks[0][len(marks[0]) // 2:]:
         for mark_str in mark_list:
-            if not mark_str:
+            if mark_str:
                 marks_str += mark_str + "️⃣"  # use combinations of emoji
     return marks_str
 
