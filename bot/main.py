@@ -7,11 +7,10 @@ from vkbottle.bot import Bot, Message, BotLabeler
 from vkbottle.dispatch.rules.bot import StateRule
 from vkbottle_types import BaseStateGroup
 
-import db
-import keyboards
-from callback import Callback
+from bot import db, keyboards
+from bot.callback import Callback
+from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 from diary import DiaryApi, APIError
-from rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 
 
 class AuthState(BaseStateGroup):
@@ -196,11 +195,3 @@ async def auth_users_from_db():
 
     logger.info(f"Auth of {count} users complete")
     return count
-
-
-async def main():
-    await auth_users_from_db()
-
-if __name__ == '__main__':
-    bot.loop.run_until_complete(main())
-    bot.run_forever()

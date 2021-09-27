@@ -3,7 +3,7 @@ import typing
 from aiohttp import ClientSession, TCPConnector, ClientResponse
 from loguru import logger
 
-from . import types
+from diary import types
 
 
 async def _check_response(r: ClientResponse) -> str:

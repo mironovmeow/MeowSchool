@@ -9,7 +9,7 @@ from vkbottle.bot import Bot
 from vkbottle.dispatch.handlers import FromFuncHandler
 from vkbottle.modules import logger
 
-from rules import ABCCallbackRule, ABCRule
+from bot.rules import ABCCallbackRule, ABCRule
 
 
 class Callback:

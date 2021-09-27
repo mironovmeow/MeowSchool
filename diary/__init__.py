@@ -1,5 +1,5 @@
-from .api import DiaryApi
-from .types import (
+from diary.api import DiaryApi
+from diary.types import (
     APIError,
     DiaryObject,
     ProgressAverageObject,
