@@ -11,7 +11,6 @@ vk_error_handler = ErrorHandler()  # todo
 
 @error_handler.register_error_handler(APIError)
 async def exc_handler_diary_api(e: APIError, m: Message):
-    await e.session.close()
     if not e.resp.ok:
         if e.resp.status == 401:
             logger.info(f"Re-auth {m.peer_id}")
@@ -22,6 +21,7 @@ async def exc_handler_diary_api(e: APIError, m: Message):
     if not e.json_success:
         logger.warning(f"Server error {e.resp.status} {await e.resp.json()}")
         await m.answer("Временные неполадки с сервером. Повторите попытку позже")
+    await e.session.close()
 
 
 @error_handler.register_error_handler(VKAPIError())

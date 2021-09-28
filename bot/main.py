@@ -42,8 +42,8 @@ callback = Callback(custom_rules={
 callback_handler = callback.view(bot)
 
 
-@error_handler.wraps_error_handler()
 @bot.on.message(keyboard="menu", state=AUTH)
+@error_handler.wraps_error_handler()
 async def menu_handler(message: Message):
     api: DiaryApi = message.state_peer.payload["api"]
     menu = message.get_payload_json().get("menu")
@@ -80,8 +80,8 @@ async def menu_handler(message: Message):
     )
 
 
-@callback_error_handler.wraps_error_handler()
 @callback(keyboard="diary", state=AUTH)
+@callback_error_handler.wraps_error_handler()
 async def callback_diary_handler(event: GroupTypes.MessageEvent):
     api: DiaryApi = event.object.state_peer.payload["api"]
     diary = await api.diary(event.object.payload.get('date'))
@@ -94,8 +94,8 @@ async def callback_diary_handler(event: GroupTypes.MessageEvent):
     )
 
 
-@callback_error_handler.wraps_error_handler()
 @callback(keyboard="marks", state=AUTH)
+@callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: GroupTypes.MessageEvent):
     api: DiaryApi = event.object.state_peer.payload["api"]
     marks = await api.progress_average(today())
@@ -108,8 +108,8 @@ async def callback_marks_handler(event: GroupTypes.MessageEvent):
     )
 
 
-@error_handler.wraps_error_handler()
 @bot.on.message(keyboard="auth")
+@error_handler.wraps_error_handler()
 async def auth_handler(message: Message):
     await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
     await message.answer(
@@ -117,8 +117,8 @@ async def auth_handler(message: Message):
     )
 
 
-@error_handler.wraps_error_handler()
 @bot.on.message(state=AuthState.LOGIN)
+@error_handler.wraps_error_handler()
 async def login_handler(message: Message):
     await bot.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
     await message.answer(
@@ -126,8 +126,8 @@ async def login_handler(message: Message):
     )
 
 
-@error_handler.wraps_error_handler()
 @bot.on.message(state=AuthState.PASSWORD)
+@error_handler.wraps_error_handler()
 async def password_handler(message: Message):
     login = message.state_peer.payload.get("login")
     password = message.text
@@ -152,8 +152,8 @@ async def password_handler(message: Message):
             raise e
 
 
-@error_handler.wraps_error_handler()
 @bot.on.message()
+@error_handler.wraps_error_handler()
 async def empty_handler(message: Message):
     if message.state_peer is not None and message.state_peer.state == AUTH:
         await message.answer(
@@ -185,8 +185,8 @@ async def empty_handler(message: Message):
                 )
 
 
-@callback_error_handler.wraps_error_handler()
 @callback()
+@callback_error_handler.wraps_error_handler()
 async def empty_callback_handler(event: GroupTypes.MessageEvent):
     if event.object.state_peer is not None and event.object.state_peer.state == AUTH:  # А вдруг?
         pass  # Кнопка не найдена
