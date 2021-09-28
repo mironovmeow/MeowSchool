@@ -30,14 +30,14 @@ def add_user(vk_id: int, login: str, password: str) -> None:
     cur.close()
 
 
-# def get_session(vk_id: int) -> typing.Union[str, None]:
-#     cur: cursor = conn.cursor()
-#     cur.execute("SELECT diary_session FROM users WHERE vk_id = ?;", (vk_id,))
-#     session = cur.fetchone()
-#     cur.close()
-#     if session:
-#         return session[0]
-#     return None
+def get_user(vk_id: int) -> Optional[str]:
+    cur = conn.cursor()
+    cur.execute("SELECT login, password FROM users WHERE vk_id = (?);", (vk_id,))
+    user = cur.fetchall()
+    cur.close()
+    if user:  # None check
+        return user[0]
+    return None
 
 
 def get_users() -> List[Tuple[int, Optional[str], Optional[str], Optional[str]]]:
@@ -45,13 +45,12 @@ def get_users() -> List[Tuple[int, Optional[str], Optional[str], Optional[str]]]
     cur.execute("SELECT vk_id, diary_session, login, password FROM users")
     users = cur.fetchall()
     cur.close()
-    if users:
+    if users:  # None check
         return users
-    else:
-        return []
+    return []
 
 
-def delete_session(vk_id: int) -> None:
+def delete_user(vk_id: int) -> None:
     cur = conn.cursor()
     cur.execute("DELETE FROM users WHERE vk_id = ?;", (vk_id,))
     conn.commit()
