@@ -1,6 +1,6 @@
 import typing
 
-from aiohttp import ClientResponse
+from aiohttp import ClientResponse, ClientSession
 from pydantic import validator
 from pydantic.fields import Field
 from pydantic.main import BaseModel
@@ -10,11 +10,12 @@ class APIError(BaseException):
     def __init__(
             self,
             resp: ClientResponse,
-            json_success: typing.Optional[bool] = None,
+            session: ClientSession,
+            json_success: typing.Optional[bool] = None
     ):
         self.resp = resp
+        self.session = session
         self.json_success = json_success
-        print(resp.request_info.url)
 
     def __str__(self):
         if not self.resp.ok:
@@ -101,7 +102,7 @@ class DiaryDayObject(BaseModel):
     lessons: typing.Optional[typing.List[DiaryLessonObject]]
 
     def info(self) -> str:
-        text = f"{self.date}\n"
+        text = f"{self.date}\n"  # todo add day of week
         if self.lessons:
             text += "\n\n".join(lesson.info() for lesson in self.lessons)
         else:

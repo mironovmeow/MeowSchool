@@ -6,15 +6,15 @@ from loguru import logger
 from diary import types
 
 
-async def _check_response(r: ClientResponse) -> str:
+async def _check_response(r: ClientResponse, session: ClientSession) -> str:
     if not r.ok:
         logger.info(f"Request failed {r.status}")
-        raise types.APIError(r)
+        raise types.APIError(r, session)
 
     json = await r.json()
     if json.get("success") is False:
         logger.info(f"Request failed {json}")
-        raise types.APIError(r, json_success=False)
+        raise types.APIError(r, session, json_success=False)
 
     logger.debug(f"Request returned {json}")
     return json
@@ -49,9 +49,10 @@ class DiaryApi:
         async with session.get(
                 'https://sosh.mon-ra.ru/rest/login'
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, session)
             user = types.LoginObject.reformat(json)
             return cls(session, user, diary_session)
+
 
     @classmethod
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
@@ -62,8 +63,9 @@ class DiaryApi:
         async with session.get(
                 f'https://sosh.mon-ra.ru/rest/login?'
                 f'login={login}&password={password}'
+
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, session)
 
             diary_cookie = r.cookies.get("sessionid")
 
@@ -83,7 +85,7 @@ class DiaryApi:
                     "to_date": to_date
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.DiaryObject.reformat(json)
 
     async def progress_average(self, date: str):
@@ -94,7 +96,7 @@ class DiaryApi:
                     "date": date
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.ProgressAverageObject.parse_obj(json)
 
     async def additional_materials(self, lesson_id: int):
@@ -105,7 +107,7 @@ class DiaryApi:
                     "lesson_id": lesson_id
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.AdditionalMaterialsObject.parse_obj(json)
 
     async def school_meetings(self):
@@ -115,7 +117,7 @@ class DiaryApi:
                     "pupil_id": self.user.children[0].id
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.SchoolMeetingsObject.parse_obj(json)
 
     async def totals(self, date: str):
@@ -126,7 +128,7 @@ class DiaryApi:
                     "date": date
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.TotalsObject.parse_obj(json)
 
     async def lessons_scores(self, date: str, subject: str):
@@ -138,19 +140,19 @@ class DiaryApi:
                     "subject": subject
                 }
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.LessonsScoreObject.parse_obj(json)
 
     async def check_food(self):
         async with self._session.post(
                 'https://sosh.mon-ra.ru/rest/check_food'
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.CheckFoodObject.parse_obj(json)
 
     async def logout(self):
         async with self._session.post(
                 'https://sosh.mon-ra.ru/rest/logout',
         ) as r:
-            json = await _check_response(r)
+            json = await _check_response(r, self._session)
             return types.BaseResponse.parse_obj(json)

@@ -9,6 +9,7 @@ from vkbottle_types import BaseStateGroup
 
 from bot import db, keyboards
 from bot.callback import Callback
+from bot.error_handler import error_handler, callback_error_handler, vk_error_handler
 from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 from diary import DiaryApi, APIError
 
@@ -31,7 +32,7 @@ labeler = BotLabeler(custom_rules={
     "state": StateRule
 })
 
-bot = Bot(os.environ["VK_TOKEN"], labeler=labeler)
+bot = Bot(os.environ["VK_TOKEN"], labeler=labeler, error_handler=vk_error_handler)
 
 callback = Callback(custom_rules={
     "keyboard": CallbackKeyboardRule,
@@ -41,6 +42,7 @@ callback = Callback(custom_rules={
 callback_handler = callback.view(bot)
 
 
+@error_handler.wraps_error_handler()
 @bot.on.message(keyboard="menu", state=AUTH)
 async def menu_handler(message: Message):
     api: DiaryApi = message.state_peer.payload["api"]
@@ -78,8 +80,9 @@ async def menu_handler(message: Message):
     )
 
 
+@callback_error_handler.wraps_error_handler()
 @callback(keyboard="diary", state=AUTH)
-async def callback_diary_handler(event):
+async def callback_diary_handler(event: GroupTypes.MessageEvent):
     api: DiaryApi = event.object.state_peer.payload["api"]
     diary = await api.diary(event.object.payload.get('date'))
     text = "РАСПИСАНИЕ УРОКОВ\n\n" + diary.info()
@@ -91,6 +94,7 @@ async def callback_diary_handler(event):
     )
 
 
+@callback_error_handler.wraps_error_handler()
 @callback(keyboard="marks", state=AUTH)
 async def callback_marks_handler(event: GroupTypes.MessageEvent):
     api: DiaryApi = event.object.state_peer.payload["api"]
@@ -104,6 +108,7 @@ async def callback_marks_handler(event: GroupTypes.MessageEvent):
     )
 
 
+@error_handler.wraps_error_handler()
 @bot.on.message(keyboard="auth")
 async def auth_handler(message: Message):
     await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
@@ -112,6 +117,7 @@ async def auth_handler(message: Message):
     )
 
 
+@error_handler.wraps_error_handler()
 @bot.on.message(state=AuthState.LOGIN)
 async def login_handler(message: Message):
     await bot.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
@@ -120,6 +126,7 @@ async def login_handler(message: Message):
     )
 
 
+@error_handler.wraps_error_handler()
 @bot.on.message(state=AuthState.PASSWORD)
 async def password_handler(message: Message):
     login = message.state_peer.payload.get("login")
@@ -145,6 +152,7 @@ async def password_handler(message: Message):
             raise e
 
 
+@error_handler.wraps_error_handler()
 @bot.on.message()
 async def empty_handler(message: Message):
     if message.state_peer is not None and message.state_peer.state == AUTH:
@@ -153,15 +161,31 @@ async def empty_handler(message: Message):
             keyboard=keyboards.menu()
         )
     else:
-        await bot.state_dispenser.set(message.peer_id, AuthState.NOT_AUTH)
-        await message.answer(
-            message="Добро пожаловать в моего бота!\n"
-                    "К сожалению, я не могу найти ваш профиль\n"
-                    "Пройдите повторную авторизацию",
-            keyboard=keyboards.auth()
-        )
+        user = db.get_user(message.peer_id)
+        if user is None:
+            await bot.state_dispenser.set(message.peer_id, AuthState.NOT_AUTH)
+            await message.answer(
+                message="Добро пожаловать в моего бота!\n"
+                        "К сожалению, я не могу найти ваш профиль\n"
+                        "Пройдите повторную авторизацию",
+                keyboard=keyboards.auth()
+            )
+        else:
+            login, password = user
+            try:
+                api = await DiaryApi.auth_by_login(login, password)
+                await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
+                logger.debug(f"Reauth @id{message.peer_id} complete")
+            except APIError as e:
+                logger.warning(f"Reauth @id{message.peer_id} failed! {e}")
+                await e.session.close()
+                await message.answer(
+                    message="Я вижу у вас уже есть профиль, но не получается войти.\n"
+                            "Временные неполадки с сервером. Повторите попытку позже"
+                )
 
 
+@callback_error_handler.wraps_error_handler()
 @callback()
 async def empty_callback_handler(event: GroupTypes.MessageEvent):
     if event.object.state_peer is not None and event.object.state_peer.state == AUTH:  # А вдруг?
@@ -190,8 +214,9 @@ async def auth_users_from_db():
             await bot.state_dispenser.set(peer_id, AUTH, api=api)
             logger.debug(f"Auth @id{peer_id} complete")
             count += 1
-        except BaseException as e:
+        except APIError as e:
             logger.warning(f"Auth @id{peer_id} failed! {e}")
+            await e.session.close()
 
     logger.info(f"Auth of {count} users complete")
     return count
