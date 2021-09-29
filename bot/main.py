@@ -1,5 +1,5 @@
 import datetime
-import os
+import sys
 
 from loguru import logger
 from vkbottle import GroupTypes
@@ -12,6 +12,10 @@ from bot.callback import CallbackView
 from bot.error_handler import error_handler, callback_error_handler, vk_error_handler
 from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 from diary import DiaryApi, APIError
+
+if len(sys.argv) < 2:
+    raise ValueError("Token is undefined")
+TOKEN = sys.argv[1]
 
 
 class AuthState(BaseStateGroup):
@@ -32,7 +36,7 @@ labeler = BotLabeler(custom_rules={
     "state": StateRule
 })
 
-bot = Bot(os.environ["VK_TOKEN"], labeler=labeler, error_handler=vk_error_handler)
+bot = Bot(TOKEN, labeler=labeler, error_handler=vk_error_handler)
 
 callback = CallbackView(custom_rules={
     "keyboard": CallbackKeyboardRule,
