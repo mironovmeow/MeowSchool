@@ -8,7 +8,7 @@ from vkbottle.dispatch.rules.bot import StateRule
 from vkbottle_types import BaseStateGroup
 
 from bot import db, keyboards
-from bot.callback import Callback
+from bot.callback import CallbackView
 from bot.error_handler import error_handler, callback_error_handler, vk_error_handler
 from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
 from diary import DiaryApi, APIError
@@ -34,7 +34,7 @@ labeler = BotLabeler(custom_rules={
 
 bot = Bot(os.environ["VK_TOKEN"], labeler=labeler, error_handler=vk_error_handler)
 
-callback = Callback(custom_rules={
+callback = CallbackView(custom_rules={
     "keyboard": CallbackKeyboardRule,
     "state": CallbackStateRule
 }, state_dispenser=bot.state_dispenser)

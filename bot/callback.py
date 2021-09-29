@@ -2,6 +2,7 @@
 My module for callback handler view
 """
 
+import json
 from typing import List, Callable, Any, Dict, Type
 
 from vkbottle import GroupEventType, GroupTypes
@@ -12,7 +13,7 @@ from vkbottle.modules import logger
 from bot.rules import ABCCallbackRule, ABCRule
 
 
-class Callback:
+class CallbackView:
     def __init__(self, custom_rules: Dict[str, Type[ABCRule]], state_dispenser):
         self.state_dispenser = state_dispenser
         self.handlers: List[FromFuncHandler] = []
@@ -56,3 +57,15 @@ class Callback:
             GroupTypes.MessageEvent
         )(decorate_callback_handler)
         return decorate_callback_handler
+
+
+async def show_snackbar(event: GroupTypes.MessageEvent, text: str):
+    return await event.ctx_api.messages.send_message_event_answer(
+        event_id=event.object.event_id,
+        user_id=event.object.user_id,
+        peer_id=event.object.peer_id,
+        event_data=json.dumps({
+            "type": "show_snackbar",
+            "text": text
+        })
+    )
