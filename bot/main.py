@@ -175,9 +175,12 @@ async def empty_handler(message: Message):
             try:
                 api = await DiaryApi.auth_by_login(login, password)
                 await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
-                logger.debug(f"Reauth @id{message.peer_id} complete")
+                await message.answer(
+                    message="Были небольшие проблемы со сервером. Повторите операцию ещё раз."
+                )
+                logger.debug(f"Re-auth @id{message.peer_id} complete")
             except APIError as e:
-                logger.warning(f"Reauth @id{message.peer_id} failed! {e}")
+                logger.warning(f"Re-auth @id{message.peer_id} failed! {e}")
                 await e.session.close()
                 await message.answer(
                     message="Я вижу у вас уже есть профиль, но не получается войти.\n"
