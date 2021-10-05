@@ -6,7 +6,6 @@ from bot.callback import show_snackbar
 from diary.types import APIError
 
 error_handler = ErrorHandler(redirect_arguments=True)
-vk_error_handler = ErrorHandler()  # todo
 
 
 @error_handler.register_error_handler(APIError)
@@ -70,3 +69,7 @@ async def exc_callback_handler_vk_api(e: VKAPIError, event: GroupTypes.MessageEv
 async def exc_callback_handler(e: BaseException, event: GroupTypes.MessageEvent):
     logger.warning(f"Undefined error {e}")
     await show_snackbar(event, "Временные неполадки с сервером. Повторите попытку позже")
+
+
+# handler for errors in vkbottle
+vk_error_handler = ErrorHandler()  # todo

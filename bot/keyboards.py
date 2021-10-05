@@ -4,7 +4,7 @@ from vkbottle import Keyboard, KeyboardButtonColor, Text, Callback
 
 
 # keyboard for select data
-def diary_week(date_str: str):
+def diary_week(date_str: str) -> str:
     today_date = datetime.date.today()
     user_date = datetime.date(*map(int, date_str.split(".")[::-1]))
     keyboard = Keyboard(inline=True)
@@ -49,7 +49,7 @@ def diary_week(date_str: str):
     return keyboard.get_json()
 
 
-def menu():
+def menu() -> str:
     keyboard = (
         Keyboard()
         .add(Text("Дневник", payload={"keyboard": "menu", "menu": "diary"}), KeyboardButtonColor.SECONDARY)
@@ -60,11 +60,11 @@ def menu():
     return keyboard.get_json()
 
 
-def empty():
+def empty() -> str:
     return Keyboard().get_json()
 
 
-def auth():
+def auth() -> str:
     keyboard = (
         Keyboard(one_time=True)
         .add(Text("Авторизоваться", payload={"keyboard": "auth"}), KeyboardButtonColor.SECONDARY)
@@ -72,7 +72,7 @@ def auth():
     return keyboard.get_json()
 
 
-def marks_stats(more: bool = False):
+def marks_stats(more: bool = False) -> str:
     keyboard = Keyboard(inline=True)
     if more:
         keyboard.add(Callback("Скрыть", {"keyboard": "marks", "more": False}), KeyboardButtonColor.SECONDARY)

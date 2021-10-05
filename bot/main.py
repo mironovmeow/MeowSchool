@@ -46,6 +46,50 @@ callback = CallbackView(custom_rules={
 callback_handler = callback.view(bot)
 
 
+@bot.on.message(keyboard="auth")
+@error_handler.wraps_error_handler()
+async def login_handler(message: Message):
+    await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+    await message.answer(
+        message="Введите логин:"
+    )
+
+
+@bot.on.message(state=AuthState.LOGIN)
+@error_handler.wraps_error_handler()
+async def password_handler(message: Message):
+    await bot.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
+    await message.answer(
+        message="Введите пароль:"
+    )
+
+
+@bot.on.message(state=AuthState.PASSWORD)
+@error_handler.wraps_error_handler()
+async def auth_handler(message: Message):
+    login = message.state_peer.payload.get("login")
+    password = message.text
+    try:
+        api = await DiaryApi.auth_by_login(login, password)
+        await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
+
+        db.add_user(message.peer_id, login, password)
+
+        logger.info(f"Auth new user: @id{message.peer_id}")
+        await message.answer(
+            message="Добро пожаловать в главное меню.",
+            keyboard=keyboards.menu()
+        )
+    except APIError as e:
+        if e.json_success is False:
+            await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+            await message.answer(
+                message="Неправильный логин или пароль. Повторите попытку\n\nВведите логин:"
+            )
+        else:  # problems with server
+            raise e
+
+
 @bot.on.message(keyboard="menu", state=AUTH)
 @error_handler.wraps_error_handler()
 async def menu_handler(message: Message):
@@ -66,10 +110,6 @@ async def menu_handler(message: Message):
         marks = await api.progress_average(today())
         text = marks.info()
         keyboard = keyboards.marks_stats()
-        # Оценки можно показывать при помощи "Календаря"
-        # За неделю показывать все оценки!
-        #
-        #
 
     elif menu == "settings":
         text = "Сейчас здесь ничего нет, но скоро будет..."
@@ -112,49 +152,7 @@ async def callback_marks_handler(event: GroupTypes.MessageEvent):
     )
 
 
-@bot.on.message(keyboard="auth")
-@error_handler.wraps_error_handler()
-async def auth_handler(message: Message):
-    await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-    await message.answer(
-        message="Введите логин:"
-    )
-
-
-@bot.on.message(state=AuthState.LOGIN)
-@error_handler.wraps_error_handler()
-async def login_handler(message: Message):
-    await bot.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
-    await message.answer(
-        message="Введите пароль:"
-    )
-
-
-@bot.on.message(state=AuthState.PASSWORD)
-@error_handler.wraps_error_handler()
-async def password_handler(message: Message):
-    login = message.state_peer.payload.get("login")
-    password = message.text
-    try:
-        api = await DiaryApi.auth_by_login(login, password)
-        await bot.state_dispenser.set(message.peer_id, AUTH, api=api)
-
-        db.add_user(message.peer_id, login, password)
-
-        logger.info(f"Auth new user: @id{message.peer_id}")
-        await message.answer(
-            message="Добро пожаловать в главное меню.",
-            keyboard=keyboards.menu()
-        )
-    except APIError as e:
-        if e.json_success is False:
-            await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-            await message.answer(
-                message="Неправильный логин или пароль. Повторите попытку\n\nВведите логин:"
-            )
-        else:
-            raise e
-
+# empty handlers
 
 @bot.on.message()
 @error_handler.wraps_error_handler()

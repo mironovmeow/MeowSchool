@@ -6,7 +6,8 @@ from typing import Union, List
 
 from vkbottle import GroupTypes
 from vkbottle.bot import Message
-from vkbottle.dispatch.rules.bot import ABCRule, ABCMessageRule
+from vkbottle.dispatch.rules.abc import ABCRule
+from vkbottle.dispatch.rules.bot import ABCMessageRule
 from vkbottle_types import BaseStateGroup
 
 

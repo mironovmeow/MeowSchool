@@ -1,3 +1,7 @@
+"""
+Module to working with database (sqlite3)
+"""
+
 import sqlite3
 from typing import List, Tuple, Optional
 

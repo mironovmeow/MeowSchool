@@ -1,14 +1,15 @@
 """
-My module for callback handler view
+My module for features with callback buttons
 """
+# todo: refactoring and add to router
 
 import json
 from typing import List, Callable, Any, Dict, Type
 
+from loguru import logger
+from vkbottle import Bot
 from vkbottle import GroupEventType, GroupTypes
-from vkbottle.bot import Bot
 from vkbottle.dispatch.handlers import FromFuncHandler
-from vkbottle.modules import logger
 
 from bot.rules import ABCCallbackRule, ABCRule
 
@@ -46,9 +47,9 @@ class CallbackView:
                     continue
                 elif isinstance(result, dict):
                     context_variables.update(result)
-                handler_response = await handler.handle(event, **context_variables)
-
-                # todo: add return manager
+                await handler.handle(event, **context_variables)
+                
+                # todo: add return manager, like in MessageView
 
                 if handler.blocking:
                     break
@@ -58,6 +59,8 @@ class CallbackView:
         )(decorate_callback_handler)
         return decorate_callback_handler
 
+
+# functions: messages.sendMessageEventAnswer
 
 async def show_snackbar(event: GroupTypes.MessageEvent, text: str):
     return await event.ctx_api.messages.send_message_event_answer(
