@@ -4,11 +4,12 @@ My module for keyboard rules
 from abc import abstractmethod
 from typing import Union, List
 
-from vkbottle import GroupTypes
 from vkbottle.bot import Message
 from vkbottle.dispatch.rules.abc import ABCRule
 from vkbottle.dispatch.rules.bot import ABCMessageRule
 from vkbottle_types import BaseStateGroup
+
+from bot.views import MessageEvent
 
 
 class KeyboardRule(ABCMessageRule):
@@ -24,7 +25,7 @@ class KeyboardRule(ABCMessageRule):
 
 class ABCCallbackRule(ABCRule):
     @abstractmethod
-    async def check(self, event: GroupTypes.MessageEvent) -> bool:
+    async def check(self, event: MessageEvent) -> bool:
         pass
 
 
@@ -32,10 +33,9 @@ class CallbackKeyboardRule(ABCCallbackRule):
     def __init__(self, keyboard: str):
         self.keyboard = keyboard
 
-    async def check(self, event: GroupTypes.MessageEvent) -> bool:
-        if type(event) == GroupTypes.MessageEvent:
-            payload = event.object.payload  # type: ignore
-            return payload.get("keyboard") == self.keyboard
+    async def check(self, event: MessageEvent) -> bool:
+        payload = event.payload
+        return payload.get("keyboard") == self.keyboard
 
 
 class CallbackStateRule(ABCCallbackRule):
@@ -44,7 +44,7 @@ class CallbackStateRule(ABCCallbackRule):
             state = [] if state is None else [state]
         self.state = state
 
-    async def check(self, event: GroupTypes.MessageEvent) -> bool:
-        if event.object.state_peer is None:
+    async def check(self, event: MessageEvent) -> bool:
+        if event.state_peer is None:
             return not self.state
-        return event.object.state_peer.state in self.state
+        return event.state_peer.state in self.state

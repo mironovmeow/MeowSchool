@@ -2,15 +2,14 @@ import datetime
 import sys
 
 from loguru import logger
-from vkbottle import GroupTypes
-from vkbottle.bot import Bot, Message, BotLabeler
+from vkbottle.bot import Bot, Message
 from vkbottle.dispatch.rules.bot import StateRule
 from vkbottle_types import BaseStateGroup
 
 from bot import db, keyboards
-from bot.callback import CallbackView
 from bot.error_handler import error_handler, callback_error_handler, vk_error_handler
 from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
+from bot.views import MessageEventLabeler, MessageEvent
 from diary import DiaryApi, APIError
 
 if len(sys.argv) < 2:
@@ -31,19 +30,12 @@ def today():
 
 AUTH = AuthState.AUTH
 
-labeler = BotLabeler(custom_rules={
+labeler = MessageEventLabeler(custom_rules={
     "keyboard": KeyboardRule,
     "state": StateRule
 })
 
 bot = Bot(TOKEN, labeler=labeler, error_handler=vk_error_handler)
-
-callback = CallbackView(custom_rules={
-    "keyboard": CallbackKeyboardRule,
-    "state": CallbackStateRule
-}, state_dispenser=bot.state_dispenser)
-
-callback_handler = callback.view(bot)
 
 
 @bot.on.message(keyboard="auth")
@@ -124,31 +116,37 @@ async def menu_handler(message: Message):
     )
 
 
-@callback(keyboard="diary", state=AUTH)
+@bot.on.message_event(
+    CallbackKeyboardRule("diary"),
+    CallbackStateRule(AUTH)
+)
 @callback_error_handler.wraps_error_handler()
-async def callback_diary_handler(event: GroupTypes.MessageEvent):
-    api: DiaryApi = event.object.state_peer.payload["api"]
-    diary = await api.diary(event.object.payload.get('date'))
+async def callback_diary_handler(event: MessageEvent):
+    api: DiaryApi = event.state_peer.payload["api"]
+    diary = await api.diary(event.payload.get('date'))
     text = "РАСПИСАНИЕ УРОКОВ\n\n" + diary.info()
     await bot.api.messages.edit(
-        peer_id=event.object.peer_id,
-        conversation_message_id=event.object.conversation_message_id,
+        peer_id=event.peer_id,
+        conversation_message_id=event.conversation_message_id,
         message=text,
-        keyboard=keyboards.diary_week(event.object.payload.get('date'))
+        keyboard=keyboards.diary_week(event.payload.get('date'))
     )
 
 
-@callback(keyboard="marks", state=AUTH)
+@bot.on.message_event(
+    CallbackKeyboardRule("marks"),
+    CallbackStateRule(AUTH)
+)
 @callback_error_handler.wraps_error_handler()
-async def callback_marks_handler(event: GroupTypes.MessageEvent):
-    api: DiaryApi = event.object.state_peer.payload["api"]
+async def callback_marks_handler(event: MessageEvent):
+    api: DiaryApi = event.state_peer.payload["api"]
     marks = await api.progress_average(today())
-    text = marks.info(event.object.payload.get("more"))
+    text = marks.info(event.payload.get("more"))
     await bot.api.messages.edit(
-        peer_id=event.object.peer_id,
-        conversation_message_id=event.object.conversation_message_id,
+        peer_id=event.peer_id,
+        conversation_message_id=event.conversation_message_id,
         message=text,
-        keyboard=keyboards.marks_stats(event.object.payload.get("more"))
+        keyboard=keyboards.marks_stats(event.payload.get("more"))
     )
 
 
@@ -190,15 +188,15 @@ async def empty_handler(message: Message):
                 )
 
 
-@callback()
+@bot.on.message_event()
 @callback_error_handler.wraps_error_handler()
-async def empty_callback_handler(event: GroupTypes.MessageEvent):
-    if event.object.state_peer is not None and event.object.state_peer.state == AUTH:  # А вдруг?
+async def empty_callback_handler(event: MessageEvent):
+    if event.state_peer is not None and event.state_peer.state == AUTH:  # А вдруг?
         pass  # Кнопка не найдена
     else:
-        await bot.state_dispenser.set(event.object.peer_id, AuthState.NOT_AUTH)
+        await bot.state_dispenser.set(event.peer_id, AuthState.NOT_AUTH)
         await bot.api.messages.send(
-            peer_id=event.object.peer_id,
+            peer_id=event.peer_id,
             message="Добро пожаловать в моего бота!\n"
                     "К сожалению, я не могу найти ваш профиль здесь\n"
                     "Пройдите авторизацию",
