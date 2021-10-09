@@ -92,7 +92,7 @@ class MessageEventView(ABCView):
 
         logger.debug("Handling event ({}) with message_event view".format(event.get("event_id")))
         context_variables = {}
-        message_event = message_event_min(**event)
+        message_event = message_event_min(event, ctx_api)
         message_event.state_peer = await state_dispenser.cast(message_event.peer_id)
 
         for middleware in self.middlewares:
