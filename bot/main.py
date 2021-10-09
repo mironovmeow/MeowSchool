@@ -7,10 +7,11 @@ from vkbottle.dispatch.rules.bot import StateRule
 from vkbottle_types import BaseStateGroup
 
 from bot import db, keyboards
-from bot.error_handler import error_handler, callback_error_handler, vk_error_handler
-from bot.rules import KeyboardRule, CallbackKeyboardRule, CallbackStateRule
-from bot.views import MessageEventLabeler, MessageEvent
-from diary import DiaryApi, APIError
+from bot.error_handler import callback_error_handler, error_handler, vk_error_handler
+from bot.rules import KeyboardRule, MessageEventKeyboardRule
+from diary import APIError, DiaryApi
+from vkbottle_meow import MessageEvent, MessageEventLabeler
+from vkbottle_meow.rules import StateRule as MessageEventStateRule
 
 if len(sys.argv) < 2:
     raise ValueError("Token is undefined")
@@ -117,8 +118,8 @@ async def menu_handler(message: Message):
 
 
 @bot.on.message_event(
-    CallbackKeyboardRule("diary"),
-    CallbackStateRule(AUTH)
+    MessageEventKeyboardRule("diary"),
+    MessageEventStateRule(AUTH)
 )
 @callback_error_handler.wraps_error_handler()
 async def callback_diary_handler(event: MessageEvent):
@@ -134,8 +135,8 @@ async def callback_diary_handler(event: MessageEvent):
 
 
 @bot.on.message_event(
-    CallbackKeyboardRule("marks"),
-    CallbackStateRule(AUTH)
+    MessageEventKeyboardRule("marks"),
+    MessageEventStateRule(AUTH)
 )
 @callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: MessageEvent):

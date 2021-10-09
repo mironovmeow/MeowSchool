@@ -2,8 +2,8 @@ from loguru import logger
 from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message
 
-from bot.views import MessageEvent
 from diary.types import APIError
+from vkbottle_meow import MessageEvent
 
 error_handler = ErrorHandler(redirect_arguments=True)
 

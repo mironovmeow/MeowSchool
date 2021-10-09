@@ -1,21 +1,14 @@
-"""
-My module for features with callback buttons
-"""
-# todo: refactoring and make new library
-
-import json
-from typing import List, Callable, Any, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 from warnings import warn
 
 from loguru import logger
-from vkbottle import ABCView, MiddlewareResponse
-from vkbottle.api import ABCAPI, API
-from vkbottle.dispatch.dispenser.abc import ABCStateDispenser
-from vkbottle.dispatch.handlers import ABCHandler, FromFuncHandler
-from vkbottle.dispatch.middlewares import BaseMiddleware
-from vkbottle.framework.bot.labeler.default import BotLabeler, ShortenRule
-from vkbottle.tools.dev_tools.utils import convert_shorten_filter
-from vkbottle_types.events.bot_events import MessageEvent as VBMessageEvent
+from vkbottle import ABCAPI, ABCHandler, ABCStateDispenser, ABCView, API, BaseMiddleware, MiddlewareResponse, \
+    convert_shorten_filter
+from vkbottle.dispatch.handlers import FromFuncHandler
+from vkbottle.framework.bot import BotLabeler
+from vkbottle.framework.bot.labeler.default import ShortenRule
+from vkbottle.modules import json
+from vkbottle_types.events import MessageEvent as _MessageEvent
 from vkbottle_types.events.objects.group_event_objects import MessageEventObject
 
 
@@ -30,7 +23,7 @@ class MessageEventMin(MessageEventObject):
     @property  # use for backward compatibility (event.object.user_id)
     def object(self):
         warn("Don't use \"object\" attribute for MessageEvent\n"
-             "It's work without him", DeprecationWarning)
+             "It's work without him", PendingDeprecationWarning)
         return self
 
     async def show_snackbar(self, text: str):
@@ -74,49 +67,14 @@ class MessageEventMin(MessageEventObject):
         )
 
 
-# MessageEventMin.update_forward_refs()  а надо ли
-
-
-def message_min(event: dict, ctx_api: "ABCAPI") -> "MessageEventMin":
-    update = VBMessageEvent(**event)
+def message_event_min(event: dict, ctx_api: "ABCAPI") -> "MessageEventMin":
+    update = _MessageEvent(**event)
     message_event = MessageEventMin(
         **update.object.dict(),
         group_id=update.group_id,
     )
     setattr(message_event, "unprepared_ctx_api", ctx_api)
     return message_event
-
-
-LabeledMessageEventHandler = Callable[..., Callable[[MessageEventMin], Any]]
-
-
-class MessageEventLabeler(BotLabeler):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.message_event_view = MessageEventView()
-
-    def message_event(
-            self, *rules: ShortenRule, blocking: bool = True, **custom_rules
-    ) -> LabeledMessageEventHandler:
-        def decorator(func):
-            self.message_event_view.handlers.append(
-                FromFuncHandler(
-                    func,
-                    *map(convert_shorten_filter, rules),
-                    *self.auto_rules,
-                    *self.get_custom_rules(custom_rules),
-                    blocking=blocking,
-                )
-            )
-            return func
-        return decorator
-
-    def views(self) -> Dict[str, "ABCView"]:
-        return {
-            "message": self.message_view,
-            "message_event": self.message_event_view,
-            "raw": self.raw_event_view
-        }
 
 
 class MessageEventView(ABCView):
@@ -134,9 +92,8 @@ class MessageEventView(ABCView):
 
         logger.debug("Handling event ({}) with message_event view".format(event.get("event_id")))
         context_variables = {}
-        message_event = MessageEventMin(**event)  # todo function
-
-        message_event.state_peer = await state_dispenser.cast(message_event.user_id)
+        message_event = message_event_min(**event)
+        message_event.state_peer = await state_dispenser.cast(message_event.peer_id)
 
         for middleware in self.middlewares:
             response = await middleware.pre(message_event)
@@ -175,4 +132,52 @@ class MessageEventView(ABCView):
             await middleware.post(message_event, self, handle_responses, handlers)
 
 
+LabeledMessageEventHandler = Callable[..., Callable[[MessageEventMin], Any]]
+
+
+class MessageEventLabeler(BotLabeler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.message_event_view = MessageEventView()
+
+    def message_event(
+            self, *rules: ShortenRule, blocking: bool = True, **custom_rules
+    ) -> LabeledMessageEventHandler:
+        def decorator(func):
+            self.message_event_view.handlers.append(
+                FromFuncHandler(
+                    func,
+                    *map(convert_shorten_filter, rules),
+                    *self.auto_rules,
+                    *self.get_custom_rules(custom_rules),
+                    blocking=blocking,
+                )
+            )
+            return func
+        return decorator
+
+    def load(self, labeler: Union[BotLabeler, "MessageEventLabeler"]):
+        if type(labeler) is MessageEventLabeler:
+            self.message_event_view.handlers.extend(labeler.message_view.handlers)
+            self.message_event_view.middlewares.extend(labeler.message_view.middlewares)
+        self.message_view.handlers.extend(labeler.message_view.handlers)
+        self.message_view.middlewares.extend(labeler.message_view.middlewares)
+        self.raw_event_view.handlers.update(labeler.raw_event_view.handlers)
+        self.raw_event_view.middlewares.extend(labeler.raw_event_view.middlewares)
+
+    def views(self) -> Dict[str, "ABCView"]:
+        return {
+            "message": self.message_view,
+            "message_event": self.message_event_view,
+            "raw": self.raw_event_view
+        }
+
+
 MessageEvent = MessageEventMin
+
+
+__all__ = (
+    "MessageEvent",
+    "MessageEventView",
+    "MessageEventLabeler"
+)
