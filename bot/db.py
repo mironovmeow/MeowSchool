@@ -3,7 +3,7 @@ Module to working with database (sqlite3)
 """
 
 import sqlite3
-from typing import List, Tuple, Optional
+import typing
 
 conn = sqlite3.connect('db.sqlite3')
 
@@ -34,7 +34,7 @@ def add_user(vk_id: int, login: str, password: str) -> None:
     cur.close()
 
 
-def get_user(vk_id: int) -> Optional[str]:
+def get_user(vk_id: int) -> typing.Optional[str]:
     cur = conn.cursor()
     cur.execute("SELECT login, password FROM users WHERE vk_id = (?);", (vk_id,))
     user = cur.fetchall()
@@ -44,7 +44,7 @@ def get_user(vk_id: int) -> Optional[str]:
     return None
 
 
-def get_users() -> List[Tuple[int, Optional[str], Optional[str], Optional[str]]]:
+def get_users() -> typing.List[typing.Tuple[int, typing.Optional[str], typing.Optional[str], typing.Optional[str]]]:
     cur = conn.cursor()
     cur.execute("SELECT vk_id, diary_session, login, password FROM users")
     users = cur.fetchall()

@@ -1,9 +1,9 @@
 import datetime
 
-from vkbottle import Keyboard, KeyboardButtonColor, Text, Callback
+from vkbottle import Callback, Keyboard, KeyboardButtonColor, Text
 
 
-# keyboard for select data
+# keyboard for get diary and select day
 def diary_week(date_str: str) -> str:
     today_date = datetime.date.today()
     user_date = datetime.date(*map(int, date_str.split(".")[::-1]))
@@ -38,7 +38,7 @@ def diary_week(date_str: str) -> str:
 
     keyboard.row()
 
-    # add week control
+    # add week control menu
     keyboard.add(Callback(
         "Неделя -", {"keyboard": "diary", "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
     ), KeyboardButtonColor.SECONDARY)
