@@ -238,3 +238,16 @@ class LessonsScoreObject(BaseResponse):
 
 class CheckFoodObject(BaseModel):  # please, contact with me if in your school work this function
     food_plugin: str  # "NO" and maybe "YES"
+
+
+__all__ = (
+    "APIError",
+    "LoginObject",
+    "DiaryObject",
+    "ProgressAverageObject",
+    "AdditionalMaterialsObject",
+    "SchoolMeetingsObject",
+    "TotalsObject",
+    "LessonsScoreObject",
+    "CheckFoodObject"
+)
