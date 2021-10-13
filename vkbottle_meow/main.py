@@ -2,8 +2,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from warnings import warn
 
 from loguru import logger
-from vkbottle import ABCAPI, ABCHandler, ABCStateDispenser, ABCView, API, BaseMiddleware, MiddlewareResponse, \
-    convert_shorten_filter
+from vkbottle import ABCAPI, ABCHandler, ABCStateDispenser, ABCView, API, BaseMiddleware, BaseReturnManager, \
+    MiddlewareResponse, convert_shorten_filter
 from vkbottle.dispatch.handlers import FromFuncHandler
 from vkbottle.framework.bot import BotLabeler
 from vkbottle.framework.bot.labeler.default import ShortenRule
@@ -12,7 +12,7 @@ from vkbottle_types.events import MessageEvent as _MessageEvent
 from vkbottle_types.events.objects.group_event_objects import MessageEventObject
 
 
-class MessageEventMin(MessageEventObject):
+class MessageEvent(MessageEventObject):
     group_id: Optional[int] = None
     unprepared_ctx_api: Optional[Any] = None
 
@@ -66,10 +66,25 @@ class MessageEventMin(MessageEventObject):
             })
         )
 
+    async def edit_message(
+            self,
+            **kwargs  # todo
+    ):
+        kwargs["conversation_message_id"] = self.conversation_message_id
+        return await self.ctx_api.messages.send(
+            **kwargs
+        )
 
-def message_event_min(event: dict, ctx_api: "ABCAPI") -> "MessageEventMin":
+
+class BotMessageEventReturnHandler(BaseReturnManager):
+    @BaseReturnManager.instance_of(str)
+    async def str_handler(self, value: str, event: MessageEvent, _: dict):
+        await event.show_snackbar(value)
+
+
+def message_event_min(event: dict, ctx_api: "ABCAPI") -> "MessageEvent":
     update = _MessageEvent(**event)
-    message_event = MessageEventMin(
+    message_event = MessageEvent(
         **update.object.dict(),
         group_id=update.group_id,
     )
@@ -81,7 +96,7 @@ class MessageEventView(ABCView):
     def __init__(self):
         self.handlers: List["ABCHandler"] = []
         self.middlewares: List["BaseMiddleware"] = []
-        # self.handler_return_manager = None  # todo add return manager for message event
+        self.handler_return_manager = BotMessageEventReturnHandler()
 
     async def process_event(self, event: dict) -> bool:
         return event["type"] == "message_event"
@@ -119,11 +134,11 @@ class MessageEventView(ABCView):
             handle_responses.append(handler_response)
             handlers.append(handler)
 
-            # return_handler = self.handler_return_manager.get_handler(handler_response)
-            # if return_handler is not None:
-            #     await return_handler(
-            #         self.handler_return_manager, handler_response, message_event, context_variables
-            #     )
+            return_handler = self.handler_return_manager.get_handler(handler_response)
+            if return_handler is not None:
+                await return_handler(
+                    self.handler_return_manager, handler_response, message_event, context_variables
+                )
 
             if handler.blocking:
                 break
@@ -132,7 +147,7 @@ class MessageEventView(ABCView):
             await middleware.post(message_event, self, handle_responses, handlers)
 
 
-LabeledMessageEventHandler = Callable[..., Callable[[MessageEventMin], Any]]
+LabeledMessageEventHandler = Callable[..., Callable[[MessageEvent], Any]]
 
 
 class MessageEventLabeler(BotLabeler):
@@ -171,9 +186,6 @@ class MessageEventLabeler(BotLabeler):
             "message_event": self.message_event_view,
             "raw": self.raw_event_view
         }
-
-
-MessageEvent = MessageEventMin
 
 
 __all__ = (

@@ -18,4 +18,4 @@ in the code, some base rules and ABCMessageEventRule.
 from .main import MessageEvent, MessageEventLabeler, MessageEventView
 from .rules import ABCMessageEventRule
 
-# todo prepare to move in another repo
+# todo wait update vkbottle to move in another repo
