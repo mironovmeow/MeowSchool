@@ -91,7 +91,7 @@ async def menu_handler(message: Message):
     text, keyboard = None, None
 
     if menu == "auth":
-        text = "Введите логин:"
+        text = "Введите логин от электронного дневника (sosh.mon-ra.ru):"
         await bot.state_dispenser.set(message.peer_id, AuthState.LOGIN)
 
     elif menu == "diary":
@@ -113,7 +113,8 @@ async def menu_handler(message: Message):
 
     await message.answer(
         message=text,
-        keyboard=keyboard
+        keyboard=keyboard,
+        dont_parse_links=True
     )
 
 
