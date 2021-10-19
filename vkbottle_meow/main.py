@@ -173,8 +173,8 @@ class MessageEventLabeler(BotLabeler):
 
     def load(self, labeler: Union[BotLabeler, "MessageEventLabeler"]):
         if type(labeler) is MessageEventLabeler:
-            self.message_event_view.handlers.extend(labeler.message_view.handlers)
-            self.message_event_view.middlewares.extend(labeler.message_view.middlewares)
+            self.message_event_view.handlers.extend(labeler.message_event_view.handlers)
+            self.message_event_view.middlewares.extend(labeler.message_event_view.middlewares)
         self.message_view.handlers.extend(labeler.message_view.handlers)
         self.message_view.middlewares.extend(labeler.message_view.middlewares)
         self.raw_event_view.handlers.update(labeler.raw_event_view.handlers)
