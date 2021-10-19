@@ -2,6 +2,8 @@ import datetime
 
 from vkbottle import Callback, Keyboard, KeyboardButtonColor, Text
 
+SECONDARY = KeyboardButtonColor.SECONDARY
+
 
 # keyboard for get diary and select day
 def diary_week(date_str: str) -> str:
@@ -17,7 +19,7 @@ def diary_week(date_str: str) -> str:
         elif today_date.strftime("%d.%m.%Y") == date:
             color = KeyboardButtonColor.PRIMARY
         else:
-            color = KeyboardButtonColor.SECONDARY
+            color = SECONDARY
         keyboard.add(Callback(
             date, {"keyboard": "diary", "date": date}
         ), color)
@@ -31,7 +33,7 @@ def diary_week(date_str: str) -> str:
         elif today_date.strftime("%d.%m.%Y") == date:
             color = KeyboardButtonColor.PRIMARY
         else:
-            color = KeyboardButtonColor.SECONDARY
+            color = SECONDARY
         keyboard.add(Callback(
             date, {"keyboard": "diary", "date": date}
         ), color)
@@ -41,10 +43,10 @@ def diary_week(date_str: str) -> str:
     # add week control menu
     keyboard.add(Callback(
         "Неделя -", {"keyboard": "diary", "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
-    ), KeyboardButtonColor.SECONDARY)
+    ), SECONDARY)
     keyboard.add(Callback(
         "Неделя +", {"keyboard": "diary", "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
-    ), KeyboardButtonColor.SECONDARY)
+    ), SECONDARY)
 
     return keyboard.get_json()
 
@@ -52,10 +54,10 @@ def diary_week(date_str: str) -> str:
 def menu() -> str:
     keyboard = (
         Keyboard()
-        .add(Text("Дневник", payload={"keyboard": "menu", "menu": "diary"}), KeyboardButtonColor.SECONDARY)
-        .add(Text("Оценки", payload={"keyboard": "menu", "menu": "marks"}), KeyboardButtonColor.SECONDARY)
+        .add(Text("Дневник", payload={"keyboard": "menu", "menu": "diary"}), SECONDARY)
+        .add(Text("Оценки", payload={"keyboard": "menu", "menu": "marks"}), SECONDARY)
         .row()
-        .add(Text("Настройки", payload={"keyboard": "menu", "menu": "settings"}), KeyboardButtonColor.SECONDARY)
+        .add(Text("Настройки", payload={"keyboard": "menu", "menu": "settings"}), SECONDARY)
     )
     return keyboard.get_json()
 
@@ -67,15 +69,32 @@ def empty() -> str:
 def auth() -> str:
     keyboard = (
         Keyboard(one_time=True)
-        .add(Text("Авторизоваться", payload={"keyboard": "auth"}), KeyboardButtonColor.SECONDARY)
+        .add(Text("Авторизоваться", payload={"keyboard": "auth"}), SECONDARY)
     )
     return keyboard.get_json()
 
 
-def marks_stats(more: bool = False) -> str:
+def marks_stats(more: bool = False, count: bool = False) -> str:
     keyboard = Keyboard(inline=True)
-    if more:
-        keyboard.add(Callback("Скрыть", {"keyboard": "marks", "more": False}), KeyboardButtonColor.SECONDARY)
+    if count:
+        keyboard.add(Callback(
+            "Средний балл",
+            {"keyboard": "marks", "more": more, "count": False}
+        ), SECONDARY)
     else:
-        keyboard.add(Callback("Подробнее", {"keyboard": "marks", "more": True}), KeyboardButtonColor.SECONDARY)
+        keyboard.add(Callback(
+            "Статистика по оценкам",
+            {"keyboard": "marks", "more": more, "count": True}
+        ), SECONDARY)
+
+        if more:
+            keyboard.add(Callback(
+                "Скрыть",
+                {"keyboard": "marks", "more": False, "count": count}
+            ), SECONDARY)
+        else:
+            keyboard.add(Callback(
+                "Подробнее",
+                {"keyboard": "marks", "more": True, "count": count}
+            ), SECONDARY)
     return keyboard.get_json()

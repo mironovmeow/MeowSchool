@@ -228,10 +228,25 @@ class ScoreObject(BaseModel):  # remake
     marks: typing.Dict[str, typing.List[str]]  # text: [marks (str)]
 
 
+def get_score_stat(scores: typing.List[ScoreObject]) -> str:
+    stats = {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
+    for score in scores:
+        for marks in score.marks.values():
+            for mark in marks:
+                stats[mark] += 1
+
+    return "  ".join(f"{mark}⃣: {count}" for mark, count in stats.items())
+
+
 class LessonsScoreObject(BaseResponse):
     kind: typing.Optional[str]
-    sub_period: str = Field(alias="subperiod")
-    data: typing.Dict[str, ScoreObject]  # lesson: ScoreObject
+    sub_period: typing.Optional[str] = Field(alias="subperiod")
+    data: typing.Optional[typing.Dict[str, typing.List[ScoreObject]]]  # lesson: ScoreObject
+
+    def info(self):
+        if self.data is not None:
+            return "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
+        return self.kind
 
 
 # /check_food

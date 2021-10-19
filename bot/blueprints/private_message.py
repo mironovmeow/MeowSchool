@@ -137,13 +137,19 @@ async def callback_diary_handler(event: MessageEvent):
 @callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
-    marks = await api.progress_average(today())
-    text = marks.info(event.payload.get("more"))
+    more: bool = event.payload.get("more")
+    count: bool = event.payload.get("count")
+    if count:
+        marks = await api.lessons_scores(today(), "")
+        text = marks.info()
+    else:
+        marks = await api.progress_average(today())
+        text = marks.info(more)
     await bp.api.messages.edit(
         peer_id=event.peer_id,
         conversation_message_id=event.conversation_message_id,
         message=text,
-        keyboard=keyboards.marks_stats(event.payload.get("more"))
+        keyboard=keyboards.marks_stats(more, count)
     )
 
 
