@@ -1,3 +1,5 @@
+import traceback
+
 from loguru import logger
 from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message
@@ -32,6 +34,7 @@ async def exc_message_handler_vk_api(e: VKAPIError, m: Message):
 @error_handler.register_undefined_error_handler()
 async def exc_message_handler(e: BaseException, m: Message):
     logger.warning(f"Undefined error {e}")
+    logger.error("\n" + traceback.format_exc())
     await m.answer("Временные неполадки с сервером. Повторите попытку позже")
 
 
@@ -68,6 +71,7 @@ async def exc_callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
 @callback_error_handler.register_undefined_error_handler()
 async def exc_callback_handler(e: BaseException, event: MessageEvent):
     logger.warning(f"Undefined error {e}")
+    logger.error("\n" + traceback.format_exc())
     await event.show_snackbar("Временные неполадки с сервером. Повторите попытку позже")
 
 
