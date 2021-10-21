@@ -42,8 +42,8 @@ bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
 # startup button
 
-@bp.on.message(peer=False)
-@error_handler.wraps_error_handler(PayloadRule({"command": "start"}))
+@bp.on.message(PayloadRule({"command": "start"}), peer=False)
+@error_handler.wraps_error_handler()
 async def start_handler(message: Message):
     if "callback" not in message.client_info.button_actions:
         await message.answer(
