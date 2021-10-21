@@ -66,14 +66,6 @@ def empty() -> str:
     return Keyboard().get_json()
 
 
-def auth() -> str:
-    keyboard = (
-        Keyboard(one_time=True)
-        .add(Text("Авторизоваться", payload={"keyboard": "auth"}), SECONDARY)
-    )
-    return keyboard.get_json()
-
-
 def marks_stats(more: bool = False, count: bool = False) -> str:
     keyboard = Keyboard(inline=True)
     if count:

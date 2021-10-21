@@ -126,7 +126,7 @@ class DiaryObject(BaseResponse):
         return cls.parse_obj(data)
 
     def info(self):
-        return "\n\n".join(day.info() for day in self.days)
+        return "РАСПИСАНИЕ УРОКОВ\n\n" + "\n\n".join(day.info() for day in self.days)
 
 
 # /rest/progress_average

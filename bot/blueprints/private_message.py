@@ -1,7 +1,7 @@
 import datetime
 
 from vkbottle.bot import Blueprint, Message
-from vkbottle.dispatch.rules.bot import PeerRule, StateRule
+from vkbottle.dispatch.rules.bot import PayloadRule, PeerRule, StateRule
 from vkbottle.modules import logger
 from vkbottle_types import BaseStateGroup
 
@@ -37,17 +37,41 @@ labeler = MessageEventLabeler(custom_rules={
     "event_state": MessageEventStateRule
 })
 
-
 bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
 
-@bp.on.message(keyboard="auth", peer=False)
-@error_handler.wraps_error_handler()
-async def login_handler(message: Message):
-    await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-    await message.answer(
-        message="Введите логин:"
-    )
+# startup button
+
+@bp.on.message(peer=False)
+@error_handler.wraps_error_handler(PayloadRule({"command": "start"}))
+async def start_handler(message: Message):
+    if "callback" not in message.client_info.button_actions:
+        await message.answer(
+            "Вы используете приложение, в котором недоступны callback-кнопки.\n"
+            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же на сайте vk.com.",
+            dont_parse_links=True
+        )
+    elif message.client_info.keyboard is False:
+        await message.answer(
+            "Вы используете приложение, в котором недоступны клавиатуры ботов.\n"
+            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же на сайте vk.com.",
+            dont_parse_links=True
+        )
+    elif message.client_info.inline_keyboard is False:
+        await message.answer(
+            "Вы используете приложение, в котором недоступны клавиатуры ботов внутри сообщений.\n"
+            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же на сайте vk.com.",
+            dont_parse_links=True
+        )
+    else:
+        await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+        await message.answer(
+            "Добро пожаловать в сообщество \"Школьный бот\"!\n"
+            "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru\n"
+            "Для начало работы мне нужен логин и пароль от вышеуказанного сайта. "
+            "Отправь первым сообщением логин.",
+            dont_parse_links=True
+        )
 
 
 @bp.on.message(state=AuthState.LOGIN, peer=False)
@@ -55,7 +79,7 @@ async def login_handler(message: Message):
 async def password_handler(message: Message):
     await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
     await message.answer(
-        message="Введите пароль:"
+        message="А теперь введите пароль."
     )
 
 
@@ -73,14 +97,16 @@ async def auth_handler(message: Message):
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: @id{message.peer_id}")
         await message.answer(
-            message="Добро пожаловать в главное меню.",
+            message="Добро пожаловать в главное меню.\n"
+                    "Воспользуйтесь кнопками снизу",
             keyboard=keyboards.menu()
         )
     except APIError as e:
         if e.json_success is False:
             await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
             await message.answer(
-                message="Неправильный логин или пароль. Повторите попытку\n\nВведите логин:"
+                message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
+                        "Отправь первым сообщением логин."
             )
         else:  # problems with server
             raise e
@@ -93,13 +119,9 @@ async def menu_handler(message: Message):
     menu = message.get_payload_json().get("menu")
     text, keyboard = None, None
 
-    if menu == "auth":
-        text = "Введите логин от электронного дневника (sosh.mon-ra.ru):"
-        await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-
-    elif menu == "diary":
+    if menu == "diary":
         diary = await api.diary(today())
-        text = f"РАСПИСАНИЕ УРОКОВ\n\n{diary.info()}"
+        text = diary.info()
         keyboard = keyboards.diary_week(today())
 
     elif menu == "marks":
@@ -126,11 +148,10 @@ async def menu_handler(message: Message):
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     diary = await api.diary(event.payload.get('date'))
-    text = "РАСПИСАНИЕ УРОКОВ\n\n" + diary.info()
     await bp.api.messages.edit(
         peer_id=event.peer_id,
         conversation_message_id=event.conversation_message_id,
-        message=text,
+        message=diary.info(),
         keyboard=keyboards.diary_week(event.payload.get('date'))
     )
 
@@ -168,13 +189,7 @@ async def empty_handler(message: Message):
     else:
         user = db.get_user(message.peer_id)
         if user is None:
-            await bp.state_dispenser.set(message.peer_id, AuthState.NOT_AUTH)
-            await message.answer(
-                message="Добро пожаловать в моего бота!\n"
-                        "К сожалению, я не могу найти ваш профиль\n"
-                        "Пройдите повторную авторизацию",
-                keyboard=keyboards.auth()
-            )
+            await start_handler(message)
         else:
             login, password = user
             try:
@@ -188,8 +203,7 @@ async def empty_handler(message: Message):
                 logger.warning(f"Re-auth @id{message.peer_id} failed! {e}")
                 await e.session.close()
                 await message.answer(
-                    message="Я вижу у вас уже есть профиль, но не получается войти.\n"
-                            "Временные неполадки с сервером. Повторите попытку позже"
+                    message="Временные неполадки с сайтом электронного дневника. Повторите попытку позже."
                 )
 
 
@@ -199,13 +213,14 @@ async def empty_callback_handler(event: MessageEvent):
     if event.state_peer is not None and event.state_peer.state == AUTH:
         await event.show_snackbar("Странно, но кнопка не найдена...")
     else:
-        await bp.state_dispenser.set(event.peer_id, AuthState.NOT_AUTH)
+        await bp.state_dispenser.set(event.peer_id, AuthState.LOGIN)
         await bp.api.messages.send(
             peer_id=event.peer_id,
-            message="Добро пожаловать в моего бота!\n"
-                    "К сожалению, я не могу найти ваш профиль здесь\n"
-                    "Пройдите авторизацию",
-            keyboard=keyboards.auth(),
+            message="Добро пожаловать в сообщество \"Школьный бот\"!\n"
+                    "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru\n"
+                    "Для начало работы мне нужен логин и пароль от вышеуказанного сайта. "
+                    "Отправь первым сообщением логин.",
+            dont_parse_links=True,
             random_id=0
         )
 

@@ -48,7 +48,7 @@ async def exc_callback_handler_diary_api(e: APIError, event: MessageEvent):
             logger.info(f"Re-auth {event.user_id}")
             await event.show_snackbar("Проблемы с авторизацией. Необходимо переподключиться")  # todo
         logger.warning(f"Server error {e.resp.status}")
-        await event.show_snackbar("Временные неполадки с сервером. Повторите попытку позже")
+        await event.show_snackbar("Временные неполадки с сервером электронного дневника. Повторите попытку позже")
 
     if not e.json_success:
         logger.warning(f"Server error {e.resp.status} {await e.resp.json()}")
@@ -65,14 +65,14 @@ async def exc_callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
 @callback_error_handler.register_error_handler(VKAPIError())
 async def exc_callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
     logger.warning(f"VKApi error {e}")
-    await event.show_snackbar("Временные неполадки с сервером. Повторите попытку позже")
+    await event.show_snackbar("Неизвестная ошибка с VK 0_o")
 
 
 @callback_error_handler.register_undefined_error_handler()
 async def exc_callback_handler(e: BaseException, event: MessageEvent):
     logger.warning(f"Undefined error {e}")
     logger.error("\n" + traceback.format_exc())
-    await event.show_snackbar("Временные неполадки с сервером. Повторите попытку позже")
+    await event.show_snackbar("Неизвестная ошибка 0_o")
 
 
 # handler for errors in vkbottle
