@@ -11,6 +11,7 @@ from bot.rules import KeyboardRule, MessageEventKeyboardRule
 from diary import APIError, DiaryApi
 from vkbottle_meow import MessageEvent, MessageEventLabeler
 from vkbottle_meow.rules import PeerRule as MessageEventPeerRule, StateRule as MessageEventStateRule
+from .admin import admin_log
 
 
 class AuthState(BaseStateGroup):
@@ -69,6 +70,7 @@ async def auth_handler(message: Message):
 
         db.add_user(message.peer_id, login, password)
 
+        await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: @id{message.peer_id}")
         await message.answer(
             message="Добро пожаловать в главное меню.",
@@ -208,7 +210,7 @@ async def empty_callback_handler(event: MessageEvent):
         )
 
 
-async def auth_in_private_message():
+async def auth_in_private_message():  # todo рассмотреть вариант с auth-middleware
     logger.debug("Start auth users from db")
     count = 0
     for peer_id, diary_session, login, password in db.get_users():
@@ -224,5 +226,6 @@ async def auth_in_private_message():
             logger.warning(f"Auth @id{peer_id} failed! {e}")
             await e.session.close()
 
+    await admin_log(f"Бот запущен. Авторизованных пользователей: {count}")
     logger.info(f"Auth of {count} users complete")
     return count
