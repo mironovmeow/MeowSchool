@@ -2,10 +2,12 @@ from typing import List
 
 from vkbottle.framework.abc_blueprint import ABCBlueprint
 
-from . import admin, chat_message, private_message
+from . import other
+from .message import message_bp_list
+from .message_event import message_event_bp_list
 
 bp_list: List[ABCBlueprint] = [
-    private_message.bp,
-    chat_message.bp,
-    admin.bp,
+    other.bp,  # for activate bp.state_dispenser and bp.api in functions
+    *message_bp_list,
+    *message_event_bp_list,
 ]

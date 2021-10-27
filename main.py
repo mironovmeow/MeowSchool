@@ -2,7 +2,7 @@ import asyncio
 import atexit
 
 from bot import auth_in_private_message, bot
-from bot.blueprints.admin import admin_log
+from bot.blueprints.other import admin_log
 from diary import DiaryApi
 
 

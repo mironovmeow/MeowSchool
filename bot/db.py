@@ -1,6 +1,7 @@
 """
 Module to working with database (sqlite3)
 """
+# TODO pysqlitecipher
 
 import sqlite3
 import typing
