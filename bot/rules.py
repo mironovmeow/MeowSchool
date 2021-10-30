@@ -4,7 +4,7 @@ My module for keyboard rules
 from vkbottle.bot import Message
 from vkbottle.dispatch.rules.bot import ABCMessageRule
 
-from vkbottle_meow import ABCMessageEventRule, MessageEvent
+from vkbottle_callback import ABCMessageEventRule, MessageEvent
 
 
 class KeyboardRule(ABCMessageRule):

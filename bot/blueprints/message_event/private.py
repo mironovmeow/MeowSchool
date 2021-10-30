@@ -1,12 +1,12 @@
 from vkbottle.bot import Blueprint
+from vkbottle_callback import MessageEvent, MessageEventLabeler
+from vkbottle_callback.rules import PeerRule as MessageEventPeerRule, StateRule as MessageEventStateRule
 
 from bot import keyboards
 from bot.blueprints.other import AuthState, today
 from bot.error_handler import callback_error_handler
 from bot.rules import MessageEventKeyboardRule
 from diary import DiaryApi
-from vkbottle_meow import MessageEvent, MessageEventLabeler
-from vkbottle_meow.rules import PeerRule as MessageEventPeerRule, StateRule as MessageEventStateRule
 
 labeler = MessageEventLabeler(custom_rules={
     "keyboard": MessageEventKeyboardRule,
