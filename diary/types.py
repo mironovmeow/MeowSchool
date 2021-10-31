@@ -244,9 +244,9 @@ class LessonsScoreObject(BaseResponse):
     data: typing.Optional[typing.Dict[str, typing.List[ScoreObject]]]  # lesson: ScoreObject
 
     def info(self):
-        if self.data is not None:
-            return "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
-        return self.kind
+        if self.data is None or len(self.data) == 0:
+            return self.kind
+        return "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 
 
 # /check_food

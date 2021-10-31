@@ -17,20 +17,18 @@ labeler.auto_rules = [MessageEventPeerRule(False)]
 bp = Blueprint(name="PrivateMessageEvent", labeler=labeler)
 
 
-@bp.on.message_event(keyboard="diary", state=AuthState.AUTH)
+@labeler.message_event(keyboard="diary", state=AuthState.AUTH)
 @callback_error_handler.wraps_error_handler()
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     diary = await api.diary(event.payload.get('date'))
-    await bp.api.messages.edit(
-        peer_id=event.peer_id,
-        conversation_message_id=event.conversation_message_id,
+    await event.edit_message(
         message=diary.info(),
         keyboard=keyboards.diary_week(event.payload.get('date'))
     )
 
 
-@bp.on.message_event(keyboard="marks", state=AuthState.AUTH)
+@labeler.message_event(keyboard="marks", state=AuthState.AUTH)
 @callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
@@ -42,9 +40,7 @@ async def callback_marks_handler(event: MessageEvent):
     else:
         marks = await api.progress_average(today())
         text = marks.info(more)
-    await bp.api.messages.edit(
-        peer_id=event.peer_id,
-        conversation_message_id=event.conversation_message_id,
+    await event.edit_message(
         message=text,
         keyboard=keyboards.marks_stats(more, count)
     )
@@ -52,7 +48,7 @@ async def callback_marks_handler(event: MessageEvent):
 
 # empty handler
 
-@bp.on.message_event()
+@labeler.message_event()
 @callback_error_handler.wraps_error_handler()
 async def empty_callback_handler(event: MessageEvent):
     if event.state_peer is not None and event.state_peer.state == AuthState.AUTH:

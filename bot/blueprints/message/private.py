@@ -29,6 +29,9 @@ async def start_handler(message: Message):
             "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
             dont_parse_links=True
         )
+        await admin_log(
+            f"У [id{message.peer_id}|чувака] не поддерживаются callback. Срочно допросить!"
+        )
     elif message.client_info.keyboard is False:
         await message.answer(
             "Вы используете приложение, в котором недоступны клавиатуры ботов.\n"
