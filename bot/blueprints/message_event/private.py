@@ -21,7 +21,8 @@ bp = Blueprint(name="PrivateMessageEvent", labeler=labeler)
 @callback_error_handler.wraps_error_handler()
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
-    date = event.payload.get('date')
+    payload = event.get_payload_json()
+    date: str = payload['date']
     diary = await api.diary(date)
     await event.edit_message(
         message=diary.info(),
@@ -37,8 +38,9 @@ async def callback_diary_handler(event: MessageEvent):
 @callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
-    more: bool = event.payload.get("more")
-    count: bool = event.payload.get("count")
+    payload = event.get_payload_json()
+    more: bool = payload["more"]
+    count: bool = payload["count"]
     if count:
         marks = await api.lessons_scores(today(), "")
         text = marks.info()

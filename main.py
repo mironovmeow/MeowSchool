@@ -13,7 +13,7 @@ def close_session():
     for state_peer in bot.state_dispenser.dictionary.values():
         api: DiaryApi = state_peer.payload["api"]
         loop.run_until_complete(api.close())
-    print("\n\nPlease, reboot me ^-^\n")
+    print("\nPlease, reboot me ^-^\n")
 
 
 if __name__ == '__main__':
