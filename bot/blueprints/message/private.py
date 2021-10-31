@@ -1,18 +1,14 @@
 from vkbottle.bot import Blueprint, Message
-from vkbottle.dispatch.rules.bot import PayloadRule, PeerRule, StateRule
+from vkbottle.dispatch.rules.bot import PayloadRule, PeerRule
 from vkbottle.framework.bot import BotLabeler
 from vkbottle.modules import logger
 
 from bot import db, keyboards
 from bot.blueprints.other import AuthState, admin_log, today
 from bot.error_handler import error_handler
-from bot.rules import KeyboardRule
 from diary import APIError, DiaryApi
 
-labeler = BotLabeler(custom_rules={
-    "keyboard": KeyboardRule,
-    "state": StateRule
-})
+labeler = BotLabeler()
 labeler.auto_rules = [PeerRule(False)]
 
 bp = Blueprint(name="PrivateMessage", labeler=labeler)

@@ -1,34 +1,39 @@
 from vkbottle.bot import Blueprint
 from vkbottle_callback import MessageEvent, MessageEventLabeler
-from vkbottle_callback.rules import PeerRule as MessageEventPeerRule, StateRule as MessageEventStateRule
+from vkbottle_callback.rules import PeerRule as MessageEventPeerRule
 
 from bot import keyboards
 from bot.blueprints.other import AuthState, today
 from bot.error_handler import callback_error_handler
-from bot.rules import MessageEventKeyboardRule
 from diary import DiaryApi
 
-labeler = MessageEventLabeler(custom_rules={
-    "keyboard": MessageEventKeyboardRule,
-    "state": MessageEventStateRule
-})
+labeler = MessageEventLabeler()
 labeler.auto_rules = [MessageEventPeerRule(False)]
 
 bp = Blueprint(name="PrivateMessageEvent", labeler=labeler)
 
 
-@labeler.message_event(keyboard="diary", state=AuthState.AUTH)
+@labeler.message_event(
+    payload_map={"keyboard": str, "date": str},
+    payload_contains={"keyboard": "diary"},
+    state=AuthState.AUTH
+)
 @callback_error_handler.wraps_error_handler()
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
-    diary = await api.diary(event.payload.get('date'))
+    date = event.payload.get('date')
+    diary = await api.diary(date)
     await event.edit_message(
         message=diary.info(),
-        keyboard=keyboards.diary_week(event.payload.get('date'))
+        keyboard=keyboards.diary_week(date)
     )
 
 
-@labeler.message_event(keyboard="marks", state=AuthState.AUTH)
+@labeler.message_event(
+    payload_map={"keyboard": str, "more": bool, "count": bool},
+    payload_contains={"keyboard": "marks"},
+    state=AuthState.AUTH
+)
 @callback_error_handler.wraps_error_handler()
 async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
