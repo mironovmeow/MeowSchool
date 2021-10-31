@@ -1,6 +1,6 @@
 import typing
 
-from aiohttp import ClientSession, TCPConnector, ClientResponse
+from aiohttp import ClientResponse, ClientSession, TCPConnector
 from loguru import logger
 
 from diary import types
@@ -52,7 +52,6 @@ class DiaryApi:
             json = await _check_response(r, session)
             user = types.LoginObject.reformat(json)
             return cls(session, user, diary_session)
-
 
     @classmethod
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
