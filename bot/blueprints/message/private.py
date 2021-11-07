@@ -17,7 +17,7 @@ bp = Blueprint(name="PrivateMessage", labeler=labeler)
 # startup button
 
 @bp.on.message(PayloadRule({"command": "start"}))
-@error_handler.wraps_error_handler()
+@error_handler.catch
 async def start_handler(message: Message):
     if "callback" not in message.client_info.button_actions:
         await message.answer(
@@ -52,7 +52,7 @@ async def start_handler(message: Message):
 
 
 @bp.on.message(state=AuthState.LOGIN)
-@error_handler.wraps_error_handler()
+@error_handler.catch
 async def password_handler(message: Message):
     await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
     await message.answer(
@@ -61,7 +61,7 @@ async def password_handler(message: Message):
 
 
 @bp.on.message(state=AuthState.PASSWORD)
-@error_handler.wraps_error_handler()
+@error_handler.catch
 async def auth_handler(message: Message):
     login = message.state_peer.payload.get("login")
     password = message.text
@@ -90,7 +90,7 @@ async def auth_handler(message: Message):
 
 
 @bp.on.message(state=AuthState.AUTH)
-@error_handler.wraps_error_handler()
+@error_handler.catch
 async def menu_handler(message: Message):
     api: DiaryApi = message.state_peer.payload["api"]
     menu = message.get_payload_json().get("menu")
@@ -123,7 +123,7 @@ async def menu_handler(message: Message):
 # empty handlers
 
 @bp.on.message()
-@error_handler.wraps_error_handler()
+@error_handler.catch
 async def empty_handler(message: Message):
     if message.state_peer is not None and message.state_peer.state == AuthState.AUTH:
         await message.answer(

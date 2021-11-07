@@ -1,4 +1,5 @@
 from vkbottle.bot import Blueprint
+from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle_callback import MessageEvent, MessageEventLabeler
 from vkbottle_callback.rules import PeerRule as MessageEventPeerRule
 
@@ -18,7 +19,7 @@ bp = Blueprint(name="PrivateMessageEvent", labeler=labeler)
     payload_contains={"keyboard": "diary"},
     state=AuthState.AUTH
 )
-@callback_error_handler.wraps_error_handler()
+@callback_error_handler.catch
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     payload = event.get_payload_json()
@@ -35,7 +36,7 @@ async def callback_diary_handler(event: MessageEvent):
     payload_contains={"keyboard": "marks"},
     state=AuthState.AUTH
 )
-@callback_error_handler.wraps_error_handler()
+@callback_error_handler.catch
 async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     payload = event.get_payload_json()
@@ -56,9 +57,9 @@ async def callback_marks_handler(event: MessageEvent):
 # empty handler
 
 @labeler.message_event()
-@callback_error_handler.wraps_error_handler()
+@callback_error_handler.catch
 async def empty_callback_handler(event: MessageEvent):
-    if event.state_peer is not None and event.state_peer.state == AuthState.AUTH:
+    if event.state_peer is not None and event.state_peer.state == get_state_repr(AuthState.AUTH):
         await event.show_snackbar("Странно, но кнопка не найдена...")
     else:
         await bp.state_dispenser.set(event.peer_id, AuthState.LOGIN)

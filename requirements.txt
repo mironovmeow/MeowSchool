@@ -1,4 +1,4 @@
-git+git://github.com/mironovmeow/vkbottle-callback@v1.0.0#egg=vkbottle-callback
+git+git://github.com/mironovmeow/vkbottle-callback@master#egg=vkbottle-callback
 aiohttp==3.7.4.post0
 async-timeout==3.0.1
 attrs==21.2.0
@@ -17,8 +17,8 @@ requests==2.26.0
 typing-extensions==3.10.0.2
 urllib3==1.26.7
 vbml==1.1
-vkbottle==3.0.2
-vkbottle-types==5.131.119.4
+vkbottle==3.1
+vkbottle-types==5.131.123.1
 watchgod==0.7
 win32-setctime==1.0.3
 yarl==1.7.0

@@ -1,8 +1,8 @@
 import datetime
 
+from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
-from vkbottle_types import BaseStateGroup
 
 from bot import db
 from diary import APIError, DiaryApi

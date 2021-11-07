@@ -25,13 +25,13 @@ async def exc_message_handler_diary_api(e: APIError, m: Message):
     await e.session.close()
 
 
-@error_handler.register_error_handler(VKAPIError())
+@error_handler.register_error_handler(VKAPIError)
 async def exc_message_handler_vk_api(e: VKAPIError, m: Message):
     logger.warning(f"VKApi error {e}")
     await m.answer("Временные неполадки с сервером. Повторите попытку позже")
 
 
-@error_handler.register_undefined_error_handler()
+@error_handler.register_undefined_error_handler
 async def exc_message_handler(e: BaseException, m: Message):
     logger.warning(f"Undefined error {e}")
     logger.error("\n" + traceback.format_exc())
@@ -56,19 +56,19 @@ async def exc_callback_handler_diary_api(e: APIError, event: MessageEvent):
     await e.session.close()
 
 
-@callback_error_handler.register_error_handler(VKAPIError(909))
+@callback_error_handler.register_error_handler(VKAPIError[909])
 async def exc_callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
     logger.info(f"VKApi edit message error {e}")
     await event.show_snackbar("Сообщение слишком старое. Воспользуйтесь меню снизу")
 
 
-@callback_error_handler.register_error_handler(VKAPIError())
+@callback_error_handler.register_error_handler(VKAPIError)
 async def exc_callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
     logger.warning(f"VKApi error {e}")
     await event.show_snackbar("Неизвестная ошибка с VK 0_o")
 
 
-@callback_error_handler.register_undefined_error_handler()
+@callback_error_handler.register_undefined_error_handler
 async def exc_callback_handler(e: BaseException, event: MessageEvent):
     logger.warning(f"Undefined error {e}")
     logger.error("\n" + traceback.format_exc())
