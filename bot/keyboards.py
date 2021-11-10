@@ -66,27 +66,27 @@ def empty() -> str:
     return Keyboard().get_json()
 
 
-def marks_stats(more: bool = False, count: bool = False) -> str:
+def marks_stats(date: str, more: bool = False, count: bool = False) -> str:
     keyboard = Keyboard(inline=True)
     if count:
         keyboard.add(Callback(
             "Средний балл",
-            {"keyboard": "marks", "more": more, "count": False}
+            {"keyboard": "marks", "date": date, "more": more, "count": False}
         ), SECONDARY)
     else:
         keyboard.add(Callback(
             "Статистика по оценкам",
-            {"keyboard": "marks", "more": more, "count": True}
+            {"keyboard": "marks", "date": date, "more": more, "count": True}
         ), SECONDARY)
 
         if more:
             keyboard.add(Callback(
                 "Скрыть",
-                {"keyboard": "marks", "more": False, "count": count}
+                {"keyboard": "marks", "date": date, "more": False, "count": count}
             ), SECONDARY)
         else:
             keyboard.add(Callback(
                 "Подробнее",
-                {"keyboard": "marks", "more": True, "count": count}
+                {"keyboard": "marks", "date": date, "more": True, "count": count}
             ), SECONDARY)
     return keyboard.get_json()

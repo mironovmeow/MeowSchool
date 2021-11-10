@@ -1,10 +1,12 @@
 import traceback
+from typing import Tuple
 
 from loguru import logger
 from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message
 from vkbottle_callback import MessageEvent
 
+from bot.blueprints.other import admin_log
 from diary.types import APIError
 
 error_handler = ErrorHandler(redirect_arguments=True)
@@ -16,13 +18,16 @@ async def exc_message_handler_diary_api(e: APIError, m: Message):
         if e.resp.status == 401:
             logger.info(f"Re-auth {m.peer_id}")
             await m.answer("Проблемы с авторизацией. Необходимо переподключиться")  # todo
-        logger.warning(f"Server error {e.resp.status}")
-        await m.answer("Временные неполадки с сервером. Повторите попытку позже")
+        else:
+            logger.warning(f"Server error {e.resp.status}")
+            await m.answer("Временные неполадки с сервером. Повторите попытку позже")
 
-    if not e.json_success:
+    elif not e.json_success:
         logger.warning(f"Server error {e.resp.status} {await e.resp.json()}")
         await m.answer("Временные неполадки с сервером. Повторите попытку позже")
-    await e.session.close()
+
+    else:
+        await admin_log("В error_handler.py ошибка (1)")  # Это не должно произойти
 
 
 @error_handler.register_error_handler(VKAPIError)
@@ -75,5 +80,13 @@ async def exc_callback_handler(e: BaseException, event: MessageEvent):
     await event.show_snackbar("Неизвестная ошибка 0_o")
 
 
-# handler for errors in vkbottle
-vk_error_handler = ErrorHandler()  # todo
+diary_date_error_handler = ErrorHandler(redirect_arguments=True)
+
+
+@diary_date_error_handler.register_error_handler(APIError)
+async def exc_diary_date_handler(e: APIError, m: Message, args: Tuple[str]):
+    if not e.json_success:
+        logger.debug(f"Wrong date {await e.resp.json()} {args[0]}")
+        await m.answer("Указана неверная дата. Попробуйте ещё раз")
+    else:
+        await exc_message_handler_diary_api(e, m)
