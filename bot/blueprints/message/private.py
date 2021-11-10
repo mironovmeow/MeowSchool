@@ -99,12 +99,13 @@ async def auth_handler(message: Message):
 async def help_command(message: Message):
     await message.answer(
         "Список всех команд:\n\n"
-        "/помощь /help -- Собственно, этот список\n"
-        "/начать /start -- Начать авторизацию в боте\n"
+        "/помощь -- Собственно, этот список\n"
+        "/начать -- Начать авторизацию в боте\n"
         "\nКоманды, повторяющие меню:\n"
-        "/дневник [дд.мм.гггг] /diary [dd.mm.yyyy] -- Посмотреть дневник (домашнее задания, оценки)\n"
-        "/оценки [дд.мм.гггг] /marks [dd.mm.yyyy]-- Посмотреть оценки\n"
-        "/настройки /settings -- Настройки бота"
+        "/дневник дд.мм.гггг -- Посмотреть дневник (домашнее задания, оценки)\n"
+        "/оценки дд.мм.гггг -- Посмотреть оценки\n"
+        "/настройки -- Настройки бота\n"
+        "\nДля всех команд есть английские алиасы (help, start, diary, marks, settings)."
     )
 
 
@@ -139,6 +140,13 @@ async def marks_command(message: Message, args: Tuple[str]):
 async def settings_command(message: Message):
     await message.answer(
         message="Сейчас здесь ничего нет, но скоро будет..."
+    )
+
+
+@bp.on.message(text="/<command>")
+async def undefined_command(message: Message, command: str):
+    await message.answer(
+        message=f"Команда \"/{command}\" не найдена. Возможно, был указан неправильный формат."
     )
 
 
