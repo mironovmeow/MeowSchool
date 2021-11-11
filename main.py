@@ -11,8 +11,9 @@ def close_session():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(admin_log("Система отключается."))
     for state_peer in bot.state_dispenser.dictionary.values():
-        api: DiaryApi = state_peer.payload["api"]
-        loop.run_until_complete(api.close())
+        api: DiaryApi = state_peer.payload.get("api")
+        if api:  # not None
+            loop.run_until_complete(api.close())
     print("\nPlease, reboot me ^-^\n")
 
 
