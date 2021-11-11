@@ -8,7 +8,7 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
 from bot import db, keyboards
-from bot.blueprints.other import AuthState, admin_log, today
+from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, error_handler
 from diary import APIError, DiaryApi
 
@@ -160,10 +160,10 @@ async def menu_handler(message: Message):
     menu = message.get_payload_json().get("menu")
 
     if menu == "diary":
-        await diary_command(message, (today(),))  # type: ignore
+        await diary_command(message, (tomorrow(),))  # type: ignore
 
     elif menu == "marks":
-        await marks_command(message, (today(),))  # type: ignore
+        await marks_command(message, (tomorrow(),))  # type: ignore
 
     elif menu == "settings":
         await settings_command(message)

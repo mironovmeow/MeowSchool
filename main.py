@@ -1,7 +1,7 @@
 import asyncio
 import atexit
 
-from bot import auth_in_private_message, bot
+from bot import auth_users_and_chats, bot, create_tables
 from bot.blueprints.other import admin_log
 from diary import DiaryApi
 
@@ -18,5 +18,6 @@ def close_session():
 
 
 if __name__ == '__main__':
-    bot.loop.run_until_complete(auth_in_private_message())
+    create_tables()
+    bot.loop.run_until_complete(auth_users_and_chats())
     bot.run_forever()

@@ -91,9 +91,11 @@ class DiaryLessonObject(BaseModel):  # TODO
     next_individual_homework: list = Field(alias="next_individualhomework")  # check structure
     subject: str
 
-    def info(self) -> str:
-        return f"{self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
-               "\n".join(self.homework)
+    def info(self, is_chat: bool) -> str:
+        if is_chat:
+            return f"{self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
+                   "\n".join(self.homework)
+        return f"{self.lesson[1]}: {self.discipline}\n" + "\n".join(self.homework)
 
 
 class DiaryDayObject(BaseModel):
@@ -101,10 +103,10 @@ class DiaryDayObject(BaseModel):
     date: str  # todo add datetime
     lessons: typing.Optional[typing.List[DiaryLessonObject]]
 
-    def info(self) -> str:
+    def info(self, is_chat: bool) -> str:
         text = f"{self.date}\n"  # todo add day of week
         if self.lessons:
-            text += "\n\n".join(lesson.info() for lesson in self.lessons)
+            text += "\n\n".join(lesson.info(is_chat) for lesson in self.lessons)
         else:
             text += self.kind
         return text
@@ -125,8 +127,8 @@ class DiaryObject(BaseResponse):
             data["days"].append(day)
         return cls.parse_obj(data)
 
-    def info(self):
-        return "РАСПИСАНИЕ УРОКОВ\n\n" + "\n\n".join(day.info() for day in self.days)
+    def info(self, is_chat: bool = False):
+        return "РАСПИСАНИЕ УРОКОВ\n\n" + "\n\n".join(day.info(is_chat) for day in self.days)
 
 
 # /rest/progress_average

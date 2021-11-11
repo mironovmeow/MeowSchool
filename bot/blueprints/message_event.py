@@ -1,7 +1,6 @@
 from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle_callback import MessageEvent, MessageEventLabeler
-from vkbottle_callback.rules import PeerRule as MessageEventPeerRule
 
 from bot import keyboards
 from bot.blueprints.other import AuthState
@@ -9,9 +8,8 @@ from bot.error_handler import callback_error_handler
 from diary import DiaryApi
 
 labeler = MessageEventLabeler()
-labeler.auto_rules = [MessageEventPeerRule(False)]
 
-bp = Blueprint(name="PrivateMessageEvent", labeler=labeler)
+bp = Blueprint(name="MessageEvent", labeler=labeler)
 
 
 @labeler.message_event(
@@ -62,7 +60,7 @@ async def callback_marks_handler(event: MessageEvent):
 async def empty_callback_handler(event: MessageEvent):
     if event.state_peer is not None and event.state_peer.state == get_state_repr(AuthState.AUTH):
         await event.show_snackbar("Странно, но кнопка не найдена...\nВыполните команду ещё раз.")
-    else:
+    elif event.peer_id < 2000000000:  # if user
         await bp.state_dispenser.set(event.peer_id, AuthState.LOGIN)
         await bp.api.messages.send(
             peer_id=event.peer_id,
@@ -73,3 +71,5 @@ async def empty_callback_handler(event: MessageEvent):
             dont_parse_links=True,
             random_id=0
         )
+    else:
+        await event.show_snackbar("Очень странная ошибка...")
