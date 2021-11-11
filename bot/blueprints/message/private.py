@@ -17,9 +17,7 @@ labeler = BotLabeler(auto_rules=[PeerRule(False)])
 bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
 
-# startup button
-
-@bp.on.message(PayloadRule({"command": "start"}))
+@bp.on.message(PayloadRule({"command": "start"}))  # startup button
 @error_handler.catch
 async def start_handler(message: Message):
     if MessagesTemplateActionTypeNames.CALLBACK not in message.client_info.button_actions:
@@ -50,13 +48,16 @@ async def start_handler(message: Message):
             "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru\n"
             "Для начало работы мне нужен логин и пароль от вышеуказанного сайта. "
             "Отправь первым сообщением логин.",
-            dont_parse_links=True
+            dont_parse_links=True,
+            keyboard=keyboards.empty()
         )
 
 
 @bp.on.message(state=AuthState.LOGIN)
 @error_handler.catch
 async def password_handler(message: Message):
+    if not message.text:  # empty
+        await start_handler(message)
     await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
     await message.answer(
         message="А теперь введите пароль."
@@ -66,6 +67,8 @@ async def password_handler(message: Message):
 @bp.on.message(state=AuthState.PASSWORD)
 @error_handler.catch
 async def auth_handler(message: Message):
+    if not message.text:  # empty
+        await start_handler(message)
     login = message.state_peer.payload.get("login")
     password = message.text
     try:
@@ -146,7 +149,8 @@ async def settings_command(message: Message):
 @bp.on.message(text="/<command>")
 async def undefined_command(message: Message, command: str):
     await message.answer(
-        message=f"Команда \"/{command}\" не найдена. Возможно, был указан неправильный формат."
+        message=f"Команда \"/{command}\" не найдена. Возможно, был использован неправильный формат.\n"
+                "Воспользуйтесь командой /помощь (/help) для получения актуального списка команд."
     )
 
 
