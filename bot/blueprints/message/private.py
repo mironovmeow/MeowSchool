@@ -53,48 +53,6 @@ async def start_handler(message: Message):
         )
 
 
-@bp.on.message(state=AuthState.LOGIN)
-@error_handler.catch
-async def password_handler(message: Message):
-    if not message.text:  # empty
-        await start_handler(message)
-    await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
-    await message.answer(
-        message="А теперь введите пароль."
-    )
-
-
-@bp.on.message(state=AuthState.PASSWORD)
-@error_handler.catch
-async def auth_handler(message: Message):
-    if not message.text:  # empty
-        await start_handler(message)
-    login = message.state_peer.payload.get("login")
-    password = message.text
-    try:
-        api = await DiaryApi.auth_by_login(login, password)
-        await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
-
-        db.add_user(message.peer_id, login, password)
-
-        await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
-        logger.info(f"Auth new user: @id{message.peer_id}")
-        await message.answer(
-            message="Добро пожаловать в главное меню.\n"
-                    "Воспользуйтесь кнопками снизу",
-            keyboard=keyboards.menu()
-        )
-    except APIError as e:  # todo message from error
-        if e.json_success is False:
-            await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-            await message.answer(
-                message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
-                        "Отправь первым сообщением логин."
-            )
-        else:  # problems with server
-            raise e
-
-
 # command handlers
 
 @bp.on.message(CommandRule("помощь") | CommandRule("help"))
@@ -152,6 +110,48 @@ async def undefined_command(message: Message, command: str):
         message=f"Команда \"/{command}\" не найдена. Возможно, был использован неправильный формат.\n"
                 "Воспользуйтесь командой /помощь (/help) для получения актуального списка команд."
     )
+
+
+@bp.on.message(state=AuthState.LOGIN)
+@error_handler.catch
+async def login_handler(message: Message):
+    if not message.text:  # empty
+        await start_handler(message)
+    await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
+    await message.answer(
+        message="А теперь введите пароль."
+    )
+
+
+@bp.on.message(state=AuthState.PASSWORD)
+@error_handler.catch
+async def password_handler(message: Message):
+    if not message.text:  # empty
+        await start_handler(message)
+    login = message.state_peer.payload.get("login")
+    password = message.text
+    try:
+        api = await DiaryApi.auth_by_login(login, password)
+        await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
+
+        db.add_user(message.peer_id, login, password)
+
+        await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
+        logger.info(f"Auth new user: @id{message.peer_id}")
+        await message.answer(
+            message="Добро пожаловать в главное меню.\n"
+                    "Воспользуйтесь кнопками снизу",
+            keyboard=keyboards.menu()
+        )
+    except APIError as e:  # todo message from error
+        if e.json_success is False:
+            await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+            await message.answer(
+                message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
+                        "Отправь первым сообщением логин."
+            )
+        else:  # problems with server
+            raise e
 
 
 @bp.on.message(state=AuthState.AUTH, payload_map={"menu": str})
