@@ -116,7 +116,7 @@ async def undefined_command(message: Message, command: str):
 @error_handler.catch
 async def login_handler(message: Message):
     if not message.text:  # empty
-        await start_handler(message)
+        return await start_handler(message)
     await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
     await message.answer(
         message="А теперь введите пароль."
@@ -127,7 +127,7 @@ async def login_handler(message: Message):
 @error_handler.catch
 async def password_handler(message: Message):
     if not message.text:  # empty
-        await start_handler(message)
+        return await start_handler(message)
     login = message.state_peer.payload.get("login")
     password = message.text
     try:
