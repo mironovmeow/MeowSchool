@@ -20,7 +20,7 @@ bp = Blueprint(name="PrivateMessage", labeler=labeler)
 @bp.on.message(ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
 @error_handler.catch
 async def invite_message(message: Message):
-    if message.action.member_id == bp.polling.group_id:  # type: ignore
+    if message.action.member_id == -bp.polling.group_id:  # type: ignore
         await message.answer(
             "Спасибо, что вы решили воспользоваться моим ботом. "
             "Напишите /начать (/start), что бы авторизовать беседу"
@@ -35,7 +35,7 @@ async def help_command(message: Message):
         "/помощь -- Собственно, этот список\n"
         "/начать -- Авторизовать беседу\n"
         "\nКоманды, повторяющие меню:\n"
-        "/дневник -- Посмотреть дневник на завтра"
+        "/дневник -- Посмотреть дневник на завтра\n"
         "/дневник дд.мм.гггг -- Посмотреть дневник (домашнее задания, оценки)\n"
         "\nДля всех команд есть английские алиасы (help, start, diary)."
     )
