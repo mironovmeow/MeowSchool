@@ -1,2 +1,2 @@
-from diary.api import DiaryApi
-from diary.types import *
+from .api import DiaryApi
+from .types import *

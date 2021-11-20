@@ -3,8 +3,8 @@ import sys
 from vkbottle.bot import Bot
 from vkbottle_callback import MessageEventLabeler
 
-from bot.blueprints import bp_list
-from bot.error_handler import vkbottle_error_handler
+from .blueprints import bp_list
+from .error_handler import vkbottle_error_handler
 
 if len(sys.argv) < 2:
     raise ValueError("Token is undefined")
