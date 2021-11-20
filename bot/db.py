@@ -1,8 +1,6 @@
 """
 Module to working with database (sqlite3)
 """
-# TODO add cryptography
-
 import sqlite3
 import typing
 
@@ -47,7 +45,7 @@ def add_user(vk_id: int, login: str, password: str) -> None:
 def get_user(vk_id: int) -> typing.Optional[str]:
     logger.debug(f"Get user: @id{vk_id}")
     cur = conn.cursor()
-    cur.execute("SELECT login, password FROM users WHERE vk_id = (?);", (vk_id,))
+    cur.execute("SELECT login, password FROM users WHERE vk_id = ?;", (vk_id,))
     user = cur.fetchall()
     cur.close()
     if user:  # None check
@@ -85,7 +83,7 @@ def add_chat(chat_id: int, vk_id: int) -> None:
 def get_chat(chat_id: int) -> typing.Optional[int]:
     logger.debug(f"Get chat: {chat_id}")
     cur = conn.cursor()
-    cur.execute("SELECT vk_id FROM chats WHERE chat_id = (?);", (chat_id,))
+    cur.execute("SELECT vk_id FROM chats WHERE chat_id = ?;", (chat_id,))
     user = cur.fetchall()
     cur.close()
     if user:  # None check
@@ -105,7 +103,7 @@ def get_chats() -> typing.List[typing.Tuple[int, int]]:
 
 
 def delete_chat(chat_id: int) -> None:
-    logger.debug(f"Delete chat: @id{chat_id}")
+    logger.debug(f"Delete chat: {chat_id}")
     cur = conn.cursor()
     cur.execute("DELETE FROM chats WHERE chat_id = ?;", (chat_id,))
     conn.commit()
