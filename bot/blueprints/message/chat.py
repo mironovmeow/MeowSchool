@@ -8,33 +8,49 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
 from bot import db, keyboards
-from bot.blueprints.other import AuthState, admin_log, tomorrow
-from bot.error_handler import diary_date_error_handler, error_handler
+from bot.blueprints.other import AuthState, IsAdmin, admin_log, tomorrow
+from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
 labeler = BotLabeler(auto_rules=[PeerRule(True)])
 
-bp = Blueprint(name="PrivateMessage", labeler=labeler)
+bp = Blueprint(name="ChatMessage", labeler=labeler)
 
 
 @bp.on.message(ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
-@error_handler.catch
+@message_error_handler.catch
 async def invite_message(message: Message):
-    if message.action.member_id == -bp.polling.group_id:  # type: ignore
+    if message.action.member_id == -message.group_id:
         await message.answer(
             "Спасибо, что вы решили воспользоваться моим ботом. "
             "Напишите /начать (/start), что бы авторизовать беседу"
         )
+        logger.info(f"Get new chat: {message.peer_id}")
+
+
+# prepare functional
+@bp.on.message(CommandRule("стоп") | CommandRule("stop") | IsAdmin)
+@message_error_handler.catch
+async def stop_command(message: Message):
+    await message.answer(
+        "Надеюсь, что вы вернёте меня"
+    )
+    await bp.api.messages.remove_chat_user(message.chat_id, member_id=-message.group_id)
+    db.delete_chat(message.peer_id)
+    if message.state_peer is not None:  # if chat is auth
+        api: DiaryApi = message.state_peer.payload["api"]
+        await api.close()
+        await bp.state_dispenser.delete(message.peer_id)
+    await admin_log(f"Бот покинул беседу.\n{message.peer_id}")
 
 
 @bp.on.message(CommandRule("помощь") | CommandRule("help"))
-@error_handler.catch
+@message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
         "Список всех команд:\n\n"
         "/помощь -- Собственно, этот список\n"
-        "/начать -- Авторизовать беседу\n"
-        "\nКоманды, повторяющие меню:\n"
+        "/начать -- Авторизовать беседу\n\n"
         "/дневник -- Посмотреть дневник на завтра\n"
         "/дневник дд.мм.гггг -- Посмотреть дневник (домашнее задания, оценки)\n"
         "\nДля всех команд есть английские алиасы (help, start, diary)."
@@ -42,7 +58,7 @@ async def help_command(message: Message):
 
 
 @bp.on.message(CommandRule("начать") | CommandRule("start"))
-@error_handler.catch
+@message_error_handler.catch
 async def start_command(message: Message):
     if message.state_peer is None:  # if chat is not auth
         user_state_peer = await bp.state_dispenser.get(message.from_id)
@@ -64,7 +80,7 @@ async def start_command(message: Message):
                 "Беседа успешна авторизована! Напишите /помощь (/help) для получения списка всех команд.",
                 reply_to=message.id
             )
-            await admin_log("Новая беседа авторизована.")
+            await admin_log(f"Новая беседа авторизована.\n{message.peer_id}")
             logger.info(f"Auth new chat: {message.peer_id}")
     else:
         await message.answer(

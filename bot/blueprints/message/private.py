@@ -9,7 +9,7 @@ from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
 from bot import db, keyboards
 from bot.blueprints.other import AuthState, admin_log, tomorrow
-from bot.error_handler import diary_date_error_handler, error_handler
+from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
 
 labeler = BotLabeler(auto_rules=[PeerRule(False)])
@@ -18,45 +18,75 @@ bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
 
 @bp.on.message(PayloadRule({"command": "start"}))  # startup button
-@error_handler.catch
+@bp.on.message(CommandRule("начать") | CommandRule("start"))
+@message_error_handler.catch
 async def start_handler(message: Message):
-    if MessagesTemplateActionTypeNames.CALLBACK not in message.client_info.button_actions:
+    # if user is registered
+    if message.state_peer is not None and message.state_peer.state == get_state_repr(AuthState.AUTH):
         await message.answer(
-            "Вы используете приложение, в котором недоступны callback-кнопки.\n"
-            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
-            dont_parse_links=True
-        )
-        await admin_log(
-            f"У [id{message.peer_id}|чувака] не поддерживаются callback. Срочно допросить!"
-        )
-    elif message.client_info.keyboard is False:
-        await message.answer(
-            "Вы используете приложение, в котором недоступны клавиатуры ботов.\n"
-            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
-            dont_parse_links=True
-        )
-    elif message.client_info.inline_keyboard is False:
-        await message.answer(
-            "Вы используете приложение, в котором недоступны клавиатуры ботов внутри сообщений.\n"
-            "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
-            dont_parse_links=True
+            message="Вы уже авторизованы. Открываю меню",
+            keyboard=keyboards.menu()
         )
     else:
-        await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-        await message.answer(
-            "Добро пожаловать в сообщество \"Школьный бот\"!\n"
-            "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru\n"
-            "Для начало работы мне нужен логин и пароль от вышеуказанного сайта. "
-            "Отправь первым сообщением логин.",
-            dont_parse_links=True,
-            keyboard=keyboards.empty()
-        )
+        user = db.get_user(message.peer_id)
+
+        # if user not registered
+        if user is None:
+            # check client_info
+            if MessagesTemplateActionTypeNames.CALLBACK not in message.client_info.button_actions:
+                await message.answer(
+                    "Вы используете приложение, в котором недоступны callback-кнопки.\n"
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    dont_parse_links=True
+                )
+                await admin_log(
+                    f"У [id{message.peer_id}|чувака] не поддерживаются callback. Срочно допросить!"
+                )
+            elif message.client_info.keyboard is False:
+                await message.answer(
+                    "Вы используете приложение, в котором недоступны клавиатуры ботов.\n"
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    dont_parse_links=True
+                )
+            elif message.client_info.inline_keyboard is False:
+                await message.answer(
+                    "Вы используете приложение, в котором недоступны клавиатуры ботов внутри сообщений.\n"
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    dont_parse_links=True
+                )
+            else:
+                await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+                await message.answer(
+                    "Добро пожаловать в сообщество \"Школьный бот\"!\n"
+                    "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru\n"
+                    "Для начало работы мне нужен логин и пароль от вышеуказанного сайта. "
+                    "Отправь первым сообщением логин.",
+                    dont_parse_links=True,
+                    keyboard=keyboards.empty()
+                )
+
+        # if user in db
+        else:
+            login, password = user
+            try:
+                api = await DiaryApi.auth_by_login(login, password)
+                await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
+                await message.answer(
+                    message="Были небольшие проблемы со сервером. Повторите операцию ещё раз."
+                )
+                logger.debug(f"Re-auth @id{message.peer_id} complete")
+            except APIError as e:
+                logger.warning(f"Re-auth @id{message.peer_id} failed! {e}")
+                await e.session.close()
+                await message.answer(
+                    message="Временные неполадки с сайтом электронного дневника. Повторите попытку позже."
+                )
 
 
 # command handlers
 
 @bp.on.message(CommandRule("помощь") | CommandRule("help"))
-@error_handler.catch
+@message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
         "Список всех команд:\n\n"
@@ -97,7 +127,7 @@ async def marks_command(message: Message, args: Tuple[str]):
 
 
 @bp.on.message(CommandRule("настройки") | CommandRule("settings"), state=AuthState.AUTH)
-@error_handler.catch
+@message_error_handler.catch
 async def settings_command(message: Message):
     await message.answer(
         message="Сейчас здесь ничего нет, но скоро будет..."
@@ -113,7 +143,7 @@ async def undefined_command(message: Message, command: str):
 
 
 @bp.on.message(state=AuthState.LOGIN)
-@error_handler.catch
+@message_error_handler.catch
 async def login_handler(message: Message):
     if not message.text:  # empty
         return await start_handler(message)
@@ -124,7 +154,7 @@ async def login_handler(message: Message):
 
 
 @bp.on.message(state=AuthState.PASSWORD)
-@error_handler.catch
+@message_error_handler.catch
 async def password_handler(message: Message):
     if not message.text:  # empty
         return await start_handler(message)
@@ -144,7 +174,7 @@ async def password_handler(message: Message):
             keyboard=keyboards.menu()
         )
     except APIError as e:  # todo message from error
-        if e.json_success is False:
+        if await e.json_success() is False:
             await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
             await message.answer(
                 message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
@@ -155,7 +185,7 @@ async def password_handler(message: Message):
 
 
 @bp.on.message(state=AuthState.AUTH, payload_map={"menu": str})
-@error_handler.catch
+@message_error_handler.catch
 async def menu_handler(message: Message):
     menu = message.get_payload_json().get("menu")
 
@@ -177,30 +207,5 @@ async def menu_handler(message: Message):
 
 
 @bp.on.message()  # empty handlers
-@bp.on.message(CommandRule("начать") | CommandRule("start"))
-@error_handler.catch
 async def empty_handler(message: Message):
-    if message.state_peer is not None and message.state_peer.state == get_state_repr(AuthState.AUTH):
-        await message.answer(
-            message="Вы уже авторизованы. Открываю меню",
-            keyboard=keyboards.menu()
-        )
-    else:
-        user = db.get_user(message.peer_id)
-        if user is None:
-            await start_handler(message)
-        else:
-            login, password = user
-            try:
-                api = await DiaryApi.auth_by_login(login, password)
-                await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
-                await message.answer(
-                    message="Были небольшие проблемы со сервером. Повторите операцию ещё раз."
-                )
-                logger.debug(f"Re-auth @id{message.peer_id} complete")
-            except APIError as e:
-                logger.warning(f"Re-auth @id{message.peer_id} failed! {e}")
-                await e.session.close()
-                await message.answer(
-                    message="Временные неполадки с сайтом электронного дневника. Повторите попытку позже."
-                )
+    return await start_handler(message)

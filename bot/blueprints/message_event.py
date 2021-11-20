@@ -42,7 +42,7 @@ async def callback_marks_handler(event: MessageEvent):
     more: bool = payload["more"]
     count: bool = payload["count"]
     if count:
-        marks = await api.lessons_scores(date, "")
+        marks = await api.lessons_scores(date)
         text = marks.info()
     else:
         marks = await api.progress_average(date)

@@ -4,6 +4,7 @@ from typing import Tuple
 from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
+from vkbottle.dispatch.rules.bot import FromPeerRule
 from vkbottle.modules import logger
 
 from bot import db
@@ -24,6 +25,7 @@ def tomorrow() -> str:
 ADMINS = [
     248525108,  # @mironovmeow      | Миронов Данил
 ]
+IsAdmin = FromPeerRule(ADMINS)
 
 
 bp = Blueprint(name="Other")  # use for .state_dispenser and .api in functions
@@ -63,7 +65,7 @@ async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотре�
             logger.warning(f"Auth {chat_id} failed! Not found user @id{user_id}")
         else:
             await bp.state_dispenser.set(chat_id, AuthState.AUTH, api=user_state_peer.payload["api"])
-            logger.debug(f"Auth @id{chat_id} complete")
+            logger.debug(f"Auth {chat_id} complete")
             count_chat += 1
 
     await admin_log("Бот запущен.\n"
