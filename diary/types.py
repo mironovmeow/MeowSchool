@@ -1,9 +1,12 @@
-import typing
+import datetime
+from typing import Dict, List, Optional, Sequence, Type, TypeVar, Union
 
 from aiohttp import ClientResponse, ClientSession
 from pydantic import validator
 from pydantic.fields import Field
 from pydantic.main import BaseModel
+
+ObjectType = TypeVar("ObjectType", bound="BaseResponse")
 
 
 class APIError(BaseException):
@@ -11,22 +14,24 @@ class APIError(BaseException):
             self,
             resp: ClientResponse,
             session: ClientSession,
-            json_success: typing.Optional[bool] = None
     ):
         self.resp = resp
         self.session = session
-        self.json_success = json_success
 
     def __str__(self):
-        if not self.resp.ok:
-            return f"APIError [{self.resp.status}]"
-        if not self.json_success:
-            return f"APIError [{self.resp.status}] {self.resp.text()}"
-        return "APIError [undefined error]"
+        return f"APIError [{self.resp.status}]"
+
+    async def json_success(self) -> bool:
+        json = await self.resp.json()
+        return json.get("success", False)
 
 
 class BaseResponse(BaseModel):
     success: bool  # checking in /diary/api.py
+
+    @classmethod
+    def reformat(cls: Type[ObjectType], obj: dict) -> ObjectType:
+        return cls.parse_obj(obj)
 
 
 # /rest/login
@@ -38,33 +43,33 @@ class ChildObject(BaseModel):
 
 
 class LoginObject(BaseResponse):
-    children: typing.List[ChildObject]
+    children: List[ChildObject]
     profile_id: int
     id: int
     type: str
     fio: str
 
     @classmethod
-    def reformat(cls, values) -> "LoginObject":
+    def reformat(cls: Type[ObjectType], obj: dict) -> ObjectType:
         return cls.parse_obj({
-            'success': values.get("success"),
+            'success': obj.get("success"),
             'children': [
                 {
                     "id": child[0],
                     "name": child[1],
                     "school": child[2]
-                } for child in values.get("childs", [])  # stupid api
+                } for child in obj.get("childs", [])  # stupid api
             ],
-            'profile_id': values.get("profile_id"),
-            'id': values.get("id"),
-            'type': values.get("type"),
-            'fio': values.get("fio")
+            'profile_id': obj.get("profile_id"),
+            'id': obj.get("id"),
+            'type': obj.get("type"),
+            'fio': obj.get("fio")
         })
 
 
 # /rest/diary
 
-def _mark(marks: typing.List[list]) -> str:  # for DiaryLessonObject.info()
+def _mark(marks: List[list]) -> str:  # for DiaryLessonObject.info()
     if len(marks) == 0:  # no marks
         return ""
     marks_str = ""
@@ -78,18 +83,22 @@ def _mark(marks: typing.List[list]) -> str:  # for DiaryLessonObject.info()
 class DiaryLessonObject(BaseModel):  # TODO
     comment: str
     discipline: str
-    remark: str  # what it?  now is ''
-    attendance: typing.Union[list, str]  # what it?  now it ['', 'Был']
+    remark: str  # what it?  now it's ''
+    attendance: Union[list, str]  # what it?  now it's ['', 'Был']
     room: str
-    next_homework: typing.Sequence[typing.Union[str, None]]  # first: str or none, second: ''
+    next_homework: Sequence[Union[str, None]]  # first: str or none, second: ''
     individual_homework: list = Field(alias="individualhomework")  # for beautiful use in code, now it []
-    marks: typing.List[list]  # [list for marks name, list of marks]  API IS SO STUPID!!!
-    date: str  # 21.12.2012 todo change to datetime
+    marks: List[list]  # [list for marks name, list of marks]  API IS SO STUPID!!!
+    date_str: str = Field(alias="date")  # 21.12.2012
     lesson: list  # [id, str, start_time_str, end_time_str]
-    homework: typing.List[str]
+    homework: List[str]
     teacher: str
     next_individual_homework: list = Field(alias="next_individualhomework")  # check structure
     subject: str
+
+    @property
+    def date(self) -> datetime.date:
+        return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
     def info(self, is_chat: bool) -> str:
         if is_chat:
@@ -98,13 +107,20 @@ class DiaryLessonObject(BaseModel):  # TODO
         return f"{self.lesson[1]}: {self.discipline}\n" + "\n".join(self.homework)
 
 
+_day_of_week: List[str] = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
+
+
 class DiaryDayObject(BaseModel):
-    kind: typing.Optional[str]
-    date: str  # todo add datetime
-    lessons: typing.Optional[typing.List[DiaryLessonObject]]
+    kind: Optional[str]
+    date_str: str = Field(alias="date")  # 21.12.2012
+    lessons: Optional[List[DiaryLessonObject]]
+
+    @property
+    def date(self) -> datetime.date:
+        return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
     def info(self, is_chat: bool) -> str:
-        text = f"{self.date}\n"  # todo add day of week
+        text = f"{_day_of_week[self.date.weekday()]} [{self.date_str}]\n"
         if self.lessons:
             text += "\n\n".join(lesson.info(is_chat) for lesson in self.lessons)
         else:
@@ -113,12 +129,12 @@ class DiaryDayObject(BaseModel):
 
 
 class DiaryObject(BaseResponse):
-    days: typing.List[DiaryDayObject]
+    days: List[DiaryDayObject]
 
     @classmethod
-    def reformat(cls, values) -> "DiaryObject":  # todo make it simple?
-        data = {"success": values.get("success", False), "days": []}
-        for value_day in values.get("days", []):
+    def reformat(cls: Type[ObjectType], obj: dict) -> ObjectType:
+        data = {"success": obj.get("success", False), "days": []}
+        for value_day in obj.get("days", []):
             day = {
                 "date": value_day[0],
                 "lessons": value_day[1].get("lessons"),
@@ -133,7 +149,7 @@ class DiaryObject(BaseResponse):
 
 # /rest/progress_average
 
-def _check_value_of_mark(value: str) -> typing.Union[bool, float]:  # for ProgressDataObject
+def _check_value_of_mark(value: str) -> Union[bool, float]:  # for ProgressDataObject
     if not 1.00 <= float(value) <= 5.00:
         return False
     return float(value)
@@ -165,8 +181,8 @@ def _bar(mark: float, full: bool) -> str:  # for ProgressDataObject
 
 
 class ProgressDataObject(BaseModel):
-    total: typing.Optional[float]
-    data: typing.Optional[typing.Dict[str, float]]  # discipline: mark
+    total: Optional[float]
+    data: Optional[Dict[str, float]]  # discipline: mark
 
     @classmethod  # fix pycharm warning
     @validator("total")
@@ -188,37 +204,36 @@ class ProgressDataObject(BaseModel):
 
 
 class ProgressAverageObject(BaseResponse):
-    kind: typing.Optional[str]
+    kind: Optional[str]
     self: ProgressDataObject
     class_year: ProgressDataObject = Field(alias="classyear")
     level: ProgressDataObject
     sub_period: str = Field(alias="subperiod")
 
     def info(self, full: bool = False) -> str:
-        if self.kind is None:
-            return f"{self.sub_period}\n\n{self.self.info(full)}"
-        else:
+        if self.kind:
             return self.kind
+        return f"{self.sub_period}\n\n{self.self.info(full)}"
 
 
 # /rest/additional_materials
 
 class AdditionalMaterialsObject(BaseResponse):
-    kind: typing.Optional[str]  # 26.04.2021  todo
+    kind: Optional[str]  # 26.04.2021  todo
 
 
 # /rest/school_meetings
 
 class SchoolMeetingsObject(BaseResponse):  # please, contact with me if in your school work this function
-    kind: typing.Optional[str]
+    kind: Optional[str]
 
 
 # /rest/totals
 
 class TotalsObject(BaseResponse):  # todo how to do it
     period: str
-    period_types: typing.List[str]  # ['1 Полугодие', '2 Полугодие', 'Годовая']
-    subjects: typing.Dict[str, typing.List[str]]  # 'Русский язык': ['4', '0', '0']
+    period_types: List[str]  # ['1 Полугодие', '2 Полугодие', 'Годовая']
+    subjects: Dict[str, List[str]]  # 'Русский язык': ['4', '0', '0']
     period_begin: str
     period_end: str
 
@@ -227,10 +242,10 @@ class TotalsObject(BaseResponse):  # todo how to do it
 
 class ScoreObject(BaseModel):  # remake
     date: str  # 2012-21-12
-    marks: typing.Dict[str, typing.List[str]]  # text: [marks (str)]
+    marks: Dict[str, List[str]]  # text: [marks (str)]
 
 
-def get_score_stat(scores: typing.List[ScoreObject]) -> str:
+def get_score_stat(scores: List[ScoreObject]) -> str:
     stats = {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
     for score in scores:
         for marks in score.marks.values():
@@ -241,9 +256,9 @@ def get_score_stat(scores: typing.List[ScoreObject]) -> str:
 
 
 class LessonsScoreObject(BaseResponse):
-    kind: typing.Optional[str]
-    sub_period: typing.Optional[str] = Field(alias="subperiod")
-    data: typing.Optional[typing.Dict[str, typing.List[ScoreObject]]]  # lesson: ScoreObject
+    kind: Optional[str]
+    sub_period: Optional[str] = Field(alias="subperiod")
+    data: Optional[Dict[str, List[ScoreObject]]]  # lesson: ScoreObject
 
     def info(self):
         if self.data is None or len(self.data) == 0:
