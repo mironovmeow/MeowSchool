@@ -3,8 +3,8 @@ from typing import Tuple
 
 from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
+from vkbottle.bot.rules import FromPeerRule
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.dispatch.rules.bot import FromPeerRule
 from vkbottle.modules import logger
 
 from bot import db

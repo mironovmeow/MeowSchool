@@ -1,8 +1,8 @@
 from typing import Tuple
 
 from vkbottle.bot import Blueprint, Message
+from vkbottle.bot.rules import ChatActionRule, CommandRule, PeerRule
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.dispatch.rules.bot import ChatActionRule, CommandRule, PeerRule
 from vkbottle.framework.bot import BotLabeler
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus

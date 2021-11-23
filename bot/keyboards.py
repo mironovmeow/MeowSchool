@@ -1,6 +1,6 @@
 import datetime
 
-from vkbottle import Callback, Keyboard, KeyboardButtonColor, Text
+from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
 SECONDARY = KeyboardButtonColor.SECONDARY
 
