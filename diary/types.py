@@ -106,9 +106,11 @@ class DiaryLessonObject(BaseModel):  # TODO
 
     def info(self, is_chat: bool) -> str:
         if is_chat:
-            return f"{self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
-                   "\n".join(self.homework)
-        return f"{self.lesson[1]}: {self.discipline}\n" + "\n".join(self.homework)
+            return f"🕗 {self.lesson[1]}: {self.discipline}\n" + \
+                   "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
+        else:
+            return f"🕗 {self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
+                   "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
 
 
 _day_of_week: List[str] = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
@@ -124,7 +126,7 @@ class DiaryDayObject(BaseModel):
         return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
     def info(self, is_chat: bool) -> str:
-        text = f"{_day_of_week[self.date.weekday()]} [{self.date_str}]\n"
+        text = f"📆 {_day_of_week[self.date.weekday()]} [{self.date_str}]\n\n"
         if self.lessons:
             text += "\n\n".join(lesson.info(is_chat) for lesson in self.lessons)
         else:
@@ -148,7 +150,7 @@ class DiaryObject(BaseResponse):
         return cls.parse_obj(data)
 
     def info(self, is_chat: bool = False):
-        return "РАСПИСАНИЕ УРОКОВ\n\n" + "\n\n".join(day.info(is_chat) for day in self.days)
+        return "\n\n".join(day.info(is_chat) for day in self.days)
 
 
 # /rest/progress_average
@@ -173,15 +175,15 @@ def _bar(mark: float, full: bool) -> str:  # for ProgressDataObject
             return "🟩🟩🟩🟩🟩"
     else:
         if mark < 1.5:
-            return "🟫"
+            return "🟤"
         elif mark < 2.5:
-            return "🟥"
+            return "🔴"
         elif mark < 3.5:
-            return "🟧"
+            return "🟠"
         elif mark < 4.5:
-            return "🟨"
+            return "🟡"
         else:
-            return "🟩"
+            return "🟢"
 
 
 class ProgressDataObject(BaseModel):
@@ -217,7 +219,7 @@ class ProgressAverageObject(BaseResponse):
     def info(self, full: bool = False) -> str:
         if self.kind:
             return self.kind
-        return f"{self.sub_period}\n\n{self.self.info(full)}"
+        return f"📆 {self.sub_period}\n\n{self.self.info(full)}"
 
 
 # /rest/additional_materials
@@ -267,7 +269,8 @@ class LessonsScoreObject(BaseResponse):
     def info(self):
         if self.data is None or len(self.data) == 0:
             return self.kind
-        return "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
+        return f"📆 {self.sub_period}" + \
+               "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 
 
 # /check_food

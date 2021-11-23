@@ -24,7 +24,7 @@ async def callback_diary_handler(event: MessageEvent):
     date: str = payload['date']
     diary = await api.diary(date)
     await event.edit_message(
-        message=diary.info(),
+        message=diary.info(event.peer_id != event.user_id),
         keyboard=keyboards.diary_week(date)
     )
 

@@ -42,10 +42,10 @@ def diary_week(date_str: str) -> str:
 
     # add week control menu
     keyboard.add(Callback(
-        "Неделя -", {"keyboard": "diary", "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
+        "➖Неделя", {"keyboard": "diary", "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
     ), SECONDARY)
     keyboard.add(Callback(
-        "Неделя +", {"keyboard": "diary", "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
+        "➕Неделя", {"keyboard": "diary", "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")}
     ), SECONDARY)
 
     return keyboard.get_json()
@@ -54,10 +54,10 @@ def diary_week(date_str: str) -> str:
 def menu() -> str:
     keyboard = (
         Keyboard()
-        .add(Text("Дневник", payload={"keyboard": "menu", "menu": "diary"}), SECONDARY)
-        .add(Text("Оценки", payload={"keyboard": "menu", "menu": "marks"}), SECONDARY)
+        .add(Text("📗Дневник", payload={"keyboard": "menu", "menu": "diary"}), SECONDARY)
+        .add(Text("🔢Оценки", payload={"keyboard": "menu", "menu": "marks"}), SECONDARY)
         .row()
-        .add(Text("Настройки", payload={"keyboard": "menu", "menu": "settings"}), SECONDARY)
+        .add(Text("⚙Настройки", payload={"keyboard": "menu", "menu": "settings"}), SECONDARY)
     )
     return keyboard.get_json()
 
@@ -70,23 +70,23 @@ def marks_stats(date: str, more: bool = False, count: bool = False) -> str:
     keyboard = Keyboard(inline=True)
     if count:
         keyboard.add(Callback(
-            "Средний балл",
+            "📈 Средний балл",
             {"keyboard": "marks", "date": date, "more": more, "count": False}
         ), SECONDARY)
     else:
         keyboard.add(Callback(
-            "Статистика по оценкам",
+            "🔢 Статистика по оценкам",
             {"keyboard": "marks", "date": date, "more": more, "count": True}
         ), SECONDARY)
 
         if more:
             keyboard.add(Callback(
-                "Скрыть",
+                "🔘 Скрыть",
                 {"keyboard": "marks", "date": date, "more": False, "count": count}
             ), SECONDARY)
         else:
             keyboard.add(Callback(
-                "Подробнее",
+                "⚪ Подробнее",
                 {"keyboard": "marks", "date": date, "more": True, "count": count}
             ), SECONDARY)
     return keyboard.get_json()

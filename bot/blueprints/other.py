@@ -33,7 +33,7 @@ bp = Blueprint(name="Other")  # use for .state_dispenser and .api in functions
 async def admin_log(text: str):
     for peer_id in ADMINS:
         await bp.api.messages.send(
-            message="Уведомление от системы!\n\n" + text,
+            message="🔔 Уведомление от системы!\n\n" + text,
             peer_id=peer_id,
             random_id=0
         )
@@ -73,7 +73,7 @@ async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотре�
             count_chat += 1
 
     await admin_log("Бот запущен.\n"
-                    f"Авторизованных пользователей: {count_user}\n"
-                    f"Авторизованных бесед: {count_chat}")
+                    f"🔸 Авторизованных пользователей: {count_user}\n"
+                    f"🔸 Авторизованных бесед: {count_chat}")
     logger.info(f"Auth of {count_user} users and {count_chat} chats complete")
     return count_user, count_chat
