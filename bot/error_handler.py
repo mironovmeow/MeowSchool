@@ -22,7 +22,7 @@ async def message_handler_diary_api(e: APIError, m: Message):
             logger.warning(f"{e}: Server error")
             await m.answer("Временные неполадки с сервером электронного дневника. Повторите попытку позже")
 
-    elif not await e.json_success():
+    elif e.json_not_success:
         logger.warning(f"{e}: Server error")
         await m.answer("Временные неполадки с сервером. Повторите попытку позже")
         await admin_log("Неверный запрос к серверу. Проверить")
@@ -56,7 +56,7 @@ async def callback_handler_diary_api(e: APIError, event: MessageEvent):
             logger.warning(f"Server error {e}")
             await event.show_snackbar("Временные неполадки с сервером электронного дневника. Повторите попытку позже")
 
-    elif not await e.json_success():
+    elif e.json_not_success:
         logger.warning(f"Server error {e}")
         await event.show_snackbar("Временные неполадки с сервером. Повторите попытку позже")
 
@@ -87,7 +87,7 @@ diary_date_error_handler = ErrorHandler(redirect_arguments=True)
 
 @diary_date_error_handler.register_error_handler(APIError)
 async def diary_date_handler(e: APIError, m: Message, args: Tuple[str]):
-    if not await e.json_success():
+    if e.json_not_success:
         logger.debug(f"{e}: Wrong date {args[0]}")
         await m.answer("Указана неверная дата. Попробуйте ещё раз")
     else:
@@ -95,7 +95,7 @@ async def diary_date_handler(e: APIError, m: Message, args: Tuple[str]):
 
 
 @diary_date_error_handler.register_undefined_error_handler
-async def diary_date_undefined(e: APIError, m: Message, _: Tuple[str]):
+async def diary_date_undefined(e: APIError, m: Message, _):
     return await message_error_handler.handle(e, m)
 
 

@@ -1,3 +1,3 @@
-from .blueprints.other import auth_users_and_chats
-from .db import create_tables
+from .blueprints.other import admin_log, auth_users_and_chats
+from .db import close, start_up
 from .main import bot

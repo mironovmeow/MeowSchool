@@ -1,7 +1,8 @@
 vkbottle @ git+https://github.com/vkbottle/vkbottle.git@dev
 vkbottle-callback @ git+git://github.com/mironovmeow/vkbottle-callback@master
-aiohttp==3.7.4.post0
-async-timeout==3.0.1
+aiohttp==3.8.1
+aiosqlite==0.17.0
+async-timeout==4.0.1
 attrs==21.2.0
 certifi==2021.10.8
 chardet==4.0.0
@@ -18,7 +19,7 @@ requests==2.26.0
 typing-extensions==3.10.0.2
 urllib3==1.26.7
 vbml==1.1
-vkbottle-types==5.131.123.1
+vkbottle-types==5.131.129.1
 watchgod==0.7
 win32-setctime==1.0.3
-yarl==1.7.0
+yarl==1.7.2

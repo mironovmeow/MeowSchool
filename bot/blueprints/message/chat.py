@@ -8,7 +8,7 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
 from bot import db, keyboards
-from bot.blueprints.other import AuthState, IsAdmin, admin_log, tomorrow
+from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
@@ -19,8 +19,15 @@ bp = Blueprint(name="ChatMessage", labeler=labeler)
 
 @bp.on.message(ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
 @message_error_handler.catch
-async def invite_message(message: Message):
+async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
+        if message.state_peer:  # if auth
+            await db.delete_chat(message.peer_id)
+
+            api: DiaryApi = message.state_peer.payload["api"]
+            await api.close()
+            await bp.state_dispenser.delete(message.peer_id)
+
         await message.answer(
             "Спасибо, что вы решили воспользоваться моим ботом. "
             "Напишите /начать (/start), что бы авторизовать беседу"
@@ -28,20 +35,32 @@ async def invite_message(message: Message):
         logger.info(f"Get new chat: {message.peer_id}")
 
 
-# prepare functional
-@bp.on.message(CommandRule("стоп") | CommandRule("stop") | IsAdmin)
+@bp.on.message(CommandRule("стоп") | CommandRule("stop"))
 @message_error_handler.catch
 async def stop_command(message: Message):
-    await message.answer(
-        "Надеюсь, что вы вернёте меня"
-    )
-    await bp.api.messages.remove_chat_user(message.chat_id, member_id=-message.group_id)
-    db.delete_chat(message.peer_id)
-    if message.state_peer is not None:  # if chat is auth
-        api: DiaryApi = message.state_peer.payload["api"]
-        await api.close()
-        await bp.state_dispenser.delete(message.peer_id)
-    await admin_log(f"Бот покинул беседу.\n{message.peer_id}")
+    if not message.state_peer:  # if not auth
+        await message.answer(
+            "Сейчас эта беседа не авторизована. Если вы хотите убрать меня, то просто удалите из беседы"
+        )
+    else:  # if auth
+        user_id: int = message.state_peer.payload["user_id"]
+        if message.from_id != user_id:
+            await message.answer(
+                "Эту команду может вызвать только тот, кто авторизовал беседу"
+            )
+        else:
+            await message.answer(
+                "Был рад с вами поработать"
+            )
+            await bp.api.messages.remove_chat_user(message.chat_id, member_id=-message.group_id)
+            await db.delete_chat(message.peer_id)
+
+            api: DiaryApi = message.state_peer.payload["api"]
+            await api.close()
+            await bp.state_dispenser.delete(message.peer_id)
+
+            await admin_log(f"Бот покинул беседу.\n{message.peer_id}")
+            logger.info(f"Leave chat: {message.peer_id}")
 
 
 @bp.on.message(CommandRule("помощь") | CommandRule("help"))
@@ -50,7 +69,8 @@ async def help_command(message: Message):
     await message.answer(
         "Список всех команд:\n\n"
         "/помощь -- Собственно, этот список\n"
-        "/начать -- Авторизовать беседу\n\n"
+        "/начать -- Авторизовать беседу\n"
+        "/стоп -- Убрать бота из беседы\n\n"
         "/дневник -- Посмотреть дневник на завтра\n"
         "/дневник дд.мм.гггг -- Посмотреть дневник (домашнее задания, оценки)\n"
         "\nДля всех команд есть английские алиасы (help, start, diary)."
@@ -72,9 +92,14 @@ async def start_command(message: Message):
             )
 
         else:
-            await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=user_state_peer.payload["api"])\
+            await bp.state_dispenser.set(
+                message.peer_id,
+                AuthState.AUTH,
+                api=user_state_peer.payload["api"],
+                user_id=message.from_id
+            )
 
-            db.add_chat(message.peer_id, message.from_id)
+            await db.add_chat(message.peer_id, message.from_id)
 
             await message.answer(
                 "Беседа успешна авторизована! Напишите /помощь (/help) для получения списка всех команд.",

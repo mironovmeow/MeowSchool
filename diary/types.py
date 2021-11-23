@@ -14,16 +14,20 @@ class APIError(BaseException):
             self,
             resp: ClientResponse,
             session: ClientSession,
+            json: Optional[dict] = None
     ):
         self.resp = resp
         self.session = session
+        self.json = json
 
     def __str__(self):
-        return f"APIError [{self.resp.status}]"
+        return f"APIError [{self.resp.status}] {self.json}"
 
-    async def json_success(self) -> bool:
-        json = await self.resp.json()
-        return json.get("success", False)
+    @property
+    def json_not_success(self) -> bool:
+        if self.json:
+            return not self.json.get("success", True)
+        return False
 
 
 class BaseResponse(BaseModel):

@@ -17,7 +17,7 @@ async def _check_response(r: ClientResponse, session: ClientSession) -> dict:
 
         if json.get("success") is False:
             logger.info(f"Request failed. Not success.")
-            raise types.APIError(r, session)
+            raise types.APIError(r, session, json=json)
 
         return json
 

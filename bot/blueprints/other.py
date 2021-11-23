@@ -43,7 +43,7 @@ async def admin_log(text: str):
 async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотреть вариант с auth-middleware
     logger.debug("Start auth users from db")
     count_user = 0
-    for peer_id, diary_session, login, password in db.get_users():
+    for peer_id, diary_session, login, password in await db.get_users():
         try:
             if diary_session:
                 api = await DiaryApi.auth_by_diary_session(diary_session)
@@ -57,14 +57,19 @@ async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотре�
             await e.session.close()
 
     count_chat = 0
-    for chat_id, user_id in db.get_chats():
+    for chat_id, user_id in await db.get_chats():
         user_state_peer = await bp.state_dispenser.get(user_id)
 
         # check auth of user
         if user_state_peer is None or user_state_peer.state != get_state_repr(AuthState.AUTH):
             logger.warning(f"Auth {chat_id} failed! Not found user @id{user_id}")
         else:
-            await bp.state_dispenser.set(chat_id, AuthState.AUTH, api=user_state_peer.payload["api"])
+            await bp.state_dispenser.set(
+                chat_id,
+                AuthState.AUTH,
+                api=user_state_peer.payload["api"],
+                user_id=user_id
+            )
             logger.debug(f"Auth {chat_id} complete")
             count_chat += 1
 

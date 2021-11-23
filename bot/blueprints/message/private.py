@@ -28,7 +28,7 @@ async def start_handler(message: Message):
             keyboard=keyboards.menu()
         )
     else:
-        user = db.get_user(message.peer_id)
+        user = await db.get_user(message.peer_id)
 
         # if user not registered
         if user is None:
@@ -164,7 +164,7 @@ async def password_handler(message: Message):
         api = await DiaryApi.auth_by_login(login, password)
         await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
 
-        db.add_user(message.peer_id, login, password)
+        await db.add_user(message.peer_id, login, password)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: @id{message.peer_id}")
@@ -173,13 +173,18 @@ async def password_handler(message: Message):
                     "Воспользуйтесь кнопками снизу",
             keyboard=keyboards.menu()
         )
-    except APIError as e:  # todo message from error
-        if await e.json_success() is False:
+    except APIError as e:
+        if e.json_not_success:
             await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
-            await message.answer(
-                message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
-                        "Отправь первым сообщением логин."
-            )
+            error_message = e.json.get("message")
+            if error_message:
+                await message.answer(message=error_message)
+            else:
+                await message.answer(
+                    message="Неправильный логин или пароль. Повторите попытку ещё раз.\n"
+                            "Отправь первым сообщением логин."
+                )
+            await e.session.close()
         else:  # problems with server
             raise e
 
