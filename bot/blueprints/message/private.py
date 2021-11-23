@@ -1,7 +1,6 @@
 from typing import Tuple
 
-from vkbottle.bot import Blueprint, Message
-from vkbottle.bot.rules import CommandRule, PayloadRule, PeerRule
+from vkbottle.bot import Blueprint, Message, rules
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.framework.bot import BotLabeler
 from vkbottle.modules import logger
@@ -12,13 +11,13 @@ from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
 
-labeler = BotLabeler(auto_rules=[PeerRule(False)])
+labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
 bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
 
-@bp.on.message(PayloadRule({"command": "start"}))  # startup button
-@bp.on.message(CommandRule("начать") | CommandRule("start"))
+@bp.on.message(rules.PayloadRule({"command": "start"}))  # startup button
+@bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
 @message_error_handler.catch
 async def start_handler(message: Message):
     # if user is registered
@@ -85,7 +84,7 @@ async def start_handler(message: Message):
 
 # command handlers
 
-@bp.on.message(CommandRule("помощь") | CommandRule("help"))
+@bp.on.message(rules.CommandRule("помощь") | rules.CommandRule("help"))
 @message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
@@ -100,7 +99,7 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(CommandRule("дневник", args_count=1) | CommandRule("diary", args_count=1), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("дневник", args_count=1) | rules.CommandRule("diary", args_count=1), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -113,7 +112,7 @@ async def diary_command(message: Message, args: Tuple[str]):
     )
 
 
-@bp.on.message(CommandRule("оценки", args_count=1) | CommandRule("marks", args_count=1), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("оценки", args_count=1) | rules.CommandRule("marks", args_count=1), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def marks_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -126,7 +125,7 @@ async def marks_command(message: Message, args: Tuple[str]):
     )
 
 
-@bp.on.message(CommandRule("настройки") | CommandRule("settings"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("настройки") | rules.CommandRule("settings"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def settings_command(message: Message):
     await message.answer(

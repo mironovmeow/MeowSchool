@@ -2,8 +2,7 @@ import datetime
 from typing import Tuple
 
 from vkbottle import BaseStateGroup
-from vkbottle.bot import Blueprint
-from vkbottle.bot.rules import FromPeerRule
+from vkbottle.bot import Blueprint, rules
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 
@@ -25,7 +24,7 @@ def tomorrow() -> str:
 ADMINS = [
     248525108,  # @mironovmeow      | Миронов Данил
 ]
-IsAdmin = FromPeerRule(ADMINS)
+IsAdmin = rules.FromPeerRule(ADMINS)
 
 
 bp = Blueprint(name="Other")  # use for .state_dispenser and .api in functions
