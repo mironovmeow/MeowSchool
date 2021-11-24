@@ -126,7 +126,7 @@ class DiaryDayObject(BaseModel):
         return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
     def info(self, is_chat: bool) -> str:
-        text = f"📆 {_day_of_week[self.date.weekday()]} [{self.date_str}]\n\n"
+        text = f"📅 {_day_of_week[self.date.weekday()]} [{self.date_str}]\n\n"
         if self.lessons:
             text += "\n\n".join(lesson.info(is_chat) for lesson in self.lessons)
         else:
@@ -219,7 +219,7 @@ class ProgressAverageObject(BaseResponse):
     def info(self, full: bool = False) -> str:
         if self.kind:
             return self.kind
-        return f"📆 {self.sub_period}\n\n{self.self.info(full)}"
+        return f"📅 {self.sub_period}\n\n{self.self.info(full)}"
 
 
 # /rest/additional_materials
@@ -269,7 +269,7 @@ class LessonsScoreObject(BaseResponse):
     def info(self):
         if self.data is None or len(self.data) == 0:
             return self.kind
-        return f"📆 {self.sub_period}\n\n" + \
+        return f"📅 {self.sub_period}\n\n" + \
                "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 
 
