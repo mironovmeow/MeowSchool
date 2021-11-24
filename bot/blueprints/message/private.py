@@ -100,7 +100,7 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(rules.CommandRule("меню") | rules.CommandRule("menu"))
+@bp.on.message(rules.CommandRule("меню") | rules.CommandRule("menu"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def menu_command(message: Message):
     await message.answer(
