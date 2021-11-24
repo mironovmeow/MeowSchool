@@ -104,12 +104,12 @@ class DiaryLessonObject(BaseModel):  # TODO
     def date(self) -> datetime.date:
         return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
-    def info(self, is_chat: bool) -> str:
+    def info(self, is_chat: bool) -> str:  # todo change logic of homework description
         if is_chat:
-            return f"🕗 {self.lesson[1]}: {self.discipline}\n" + \
+            return f"⌚ {self.lesson[1]}: {self.discipline}\n" + \
                    "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
         else:
-            return f"🕗 {self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
+            return f"⌚ {self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
                    "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
 
 
@@ -269,7 +269,7 @@ class LessonsScoreObject(BaseResponse):
     def info(self):
         if self.data is None or len(self.data) == 0:
             return self.kind
-        return f"📆 {self.sub_period}" + \
+        return f"📆 {self.sub_period}\n\n" + \
                "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 
 
