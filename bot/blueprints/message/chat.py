@@ -1,8 +1,8 @@
 from typing import Tuple
 
-from vkbottle.bot import Blueprint, Message, rules
+from vkbottle.bot import Blueprint, BotLabeler, Message
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.framework.bot import BotLabeler
+from vkbottle.dispatch.rules.base import ChatActionRule, CommandRule, PeerRule
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
@@ -11,12 +11,12 @@ from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
-labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
+labeler = BotLabeler(auto_rules=[PeerRule(True)])
 
 bp = Blueprint(name="ChatMessage", labeler=labeler)
 
 
-@bp.on.message(rules.ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
+@bp.on.message(ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
 @message_error_handler.catch
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
@@ -34,7 +34,7 @@ async def invite_handler(message: Message):
         logger.info(f"Get new chat: {message.peer_id}")
 
 
-@bp.on.message(rules.CommandRule("стоп") | rules.CommandRule("stop"))
+@bp.on.message(CommandRule("стоп") | CommandRule("stop"))
 @message_error_handler.catch
 async def stop_command(message: Message):
     if not message.state_peer:  # if not auth
@@ -62,7 +62,7 @@ async def stop_command(message: Message):
             logger.info(f"Leave chat: {message.peer_id}")
 
 
-@bp.on.message(rules.CommandRule("помощь") | rules.CommandRule("help"))
+@bp.on.message(CommandRule("помощь") | CommandRule("help"))
 @message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
@@ -76,7 +76,7 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
+@bp.on.message(CommandRule("начать") | CommandRule("start"))
 @message_error_handler.catch
 async def start_command(message: Message):
     if message.state_peer is None:  # if chat is not auth
@@ -114,7 +114,7 @@ async def start_command(message: Message):
         )
 
 
-@bp.on.message(rules.CommandRule("дневник", args_count=1) | rules.CommandRule("diary", args_count=1), state=AuthState.AUTH)
+@bp.on.message(CommandRule("дневник", args_count=1) | CommandRule("diary", args_count=1), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -122,21 +122,12 @@ async def diary_command(message: Message, args: Tuple[str]):
     diary = await api.diary(date)
     await message.answer(
         message=diary.info(is_chat=True),
-        keyboard=keyboards.diary_week(date),
+        keyboard=keyboards.diary_week(date, api.user.children),
         dont_parse_links=True
     )
 
 
-@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=AuthState.AUTH)
+@bp.on.message(CommandRule("дневник") | CommandRule("diary"), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_tomorrow_command(message: Message):
     return await diary_command(message, (tomorrow(),))  # type: ignore
-
-
-@bp.on.message(text="/<command>")
-async def undefined_command(message: Message, command: str):
-    await message.answer(
-        message=f"🚧 Команда \"/{command}\" не найдена. Возможно, был использован неправильный формат.\n"
-                "Воспользуйтесь командой /помощь (/help) для получения списка команд.",
-        reply_to=message.id
-    )

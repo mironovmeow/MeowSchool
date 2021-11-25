@@ -13,7 +13,7 @@ bp = Blueprint(name="MessageEvent", labeler=labeler)
 
 
 @labeler.message_event(
-    payload_map={"keyboard": str, "date": str},
+    payload_map={"keyboard": str, "date": str, "child": int},
     payload_contains={"keyboard": "diary"},
     state=AuthState.AUTH
 )
@@ -21,16 +21,30 @@ bp = Blueprint(name="MessageEvent", labeler=labeler)
 async def callback_diary_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     payload = event.get_payload_json()
-    date: str = payload['date']
+    date: str = payload["date"]
+    child: int = payload["child"]
     diary = await api.diary(date)
     await event.edit_message(
         message=diary.info(event.peer_id != event.user_id),
-        keyboard=keyboards.diary_week(date)
+        keyboard=keyboards.diary_week(date, api.user.children, child)
+    )
+
+
+# backward compatibility
+@labeler.message_event(
+    payload_map={"keyboard": str, "date": str},
+    payload_contains={"keyboard": "diary"},
+    state=AuthState.AUTH
+)
+@callback_error_handler.catch
+async def callback_marks_handler(event: MessageEvent):
+    await event.show_snackbar(
+        "🚧 Дневник были обновлен. Вызовите повторно команду \"/дневник\""
     )
 
 
 @labeler.message_event(
-    payload_map={"keyboard": str, "date": str, "more": bool, "count": bool},
+    payload_map={"keyboard": str, "date": str, "count": bool, "child": int},
     payload_contains={"keyboard": "marks"},
     state=AuthState.AUTH
 )
@@ -39,17 +53,30 @@ async def callback_marks_handler(event: MessageEvent):
     api: DiaryApi = event.state_peer.payload["api"]
     payload = event.get_payload_json()
     date: str = payload["date"]
-    more: bool = payload["more"]
     count: bool = payload["count"]
+    child: int = payload["child"]
     if count:
         marks = await api.lessons_scores(date)
         text = marks.info()
     else:
         marks = await api.progress_average(date)
-        text = marks.info(more)
+        text = marks.info()
     await event.edit_message(
         message=text,
-        keyboard=keyboards.marks_stats(date, more, count)
+        keyboard=keyboards.marks_stats(date, api.user.children, count, child)
+    )
+
+
+# backward compatibility
+@labeler.message_event(
+    payload_map={"keyboard": str, "date": str, "more": bool, "count": bool},
+    payload_contains={"keyboard": "marks"},
+    state=AuthState.AUTH
+)
+@callback_error_handler.catch
+async def callback_marks_handler(event: MessageEvent):
+    await event.show_snackbar(
+        "🚧 Оценки были обновлены. Вызовите повторно команду \"/оценки\""
     )
 
 

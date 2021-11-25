@@ -5,7 +5,7 @@ from vkbottle.bot import Bot
 from vkbottle_callback import MessageEventLabeler
 
 from diary import DiaryApi
-from . import start_up, auth_users_and_chats, admin_log, close, bp_list, vkbottle_error_handler
+from . import admin_log, auth_users_and_chats, bp_list, close, start_up, vkbottle_error_handler
 
 if len(sys.argv) < 2:
     raise ValueError("Token is undefined")
@@ -15,10 +15,11 @@ TOKEN = sys.argv[1]
 async def _close_session():
     await admin_log("Система отключается.")
     await close()
-    for state_peer in bot.state_dispenser.dictionary.values():
-        api: DiaryApi = state_peer.payload.get("api")
-        if api:  # not None
-            await api.close()
+    for peer_id, state_peer in bot.state_dispenser.dictionary.items():
+        if peer_id < 2000000000:  # if user
+            api: DiaryApi = state_peer.payload.get("api")
+            if api:  # not None
+                await api.close()
 
 
 labeler = MessageEventLabeler()

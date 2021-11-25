@@ -161,29 +161,17 @@ def _check_value_of_mark(value: str) -> Union[bool, float]:  # for ProgressDataO
     return float(value)
 
 
-def _bar(mark: float, full: bool) -> str:  # for ProgressDataObject
-    if full:
-        if mark < 1.5:
-            return "🟫⬜⬜⬜⬜"
-        elif mark < 2.5:
-            return "🟥🟥⬜⬜⬜"
-        elif mark < 3.5:
-            return "🟧🟧🟧⬜⬜"
-        elif mark < 4.5:
-            return "🟨🟨🟨🟨⬜"
-        else:
-            return "🟩🟩🟩🟩🟩"
+def _bar(mark: float) -> str:  # for ProgressDataObject
+    if mark < 1.5:
+        return "🟤"
+    elif mark < 2.5:
+        return "🔴"
+    elif mark < 3.5:
+        return "🟠"
+    elif mark < 4.5:
+        return "🟡"
     else:
-        if mark < 1.5:
-            return "🟤"
-        elif mark < 2.5:
-            return "🔴"
-        elif mark < 3.5:
-            return "🟠"
-        elif mark < 4.5:
-            return "🟡"
-        else:
-            return "🟢"
+        return "🟢"
 
 
 class ProgressDataObject(BaseModel):
@@ -200,13 +188,9 @@ class ProgressDataObject(BaseModel):
     def check_data(cls, value):
         return _check_value_of_mark(value)
 
-    def info(self, full: bool) -> str:
-        if full:
-            return "\n".join(f"{_bar(mark, True)} ({mark:.2f}): {subject}"
-                             for subject, mark in sorted(self.data.items(), key=lambda v: (-v[1], v[0])))
-        else:
-            return "\n".join(f"{_bar(mark, False)} {subject}"
-                             for subject, mark in sorted(self.data.items(), key=lambda v: (-v[1], v[0])))
+    def info(self) -> str:
+        return "\n".join(f"{_bar(mark)} [{mark:.2f}] {subject}"
+                         for subject, mark in sorted(self.data.items(), key=lambda v: (-v[1], v[0])))
 
 
 class ProgressAverageObject(BaseResponse):
@@ -216,10 +200,10 @@ class ProgressAverageObject(BaseResponse):
     level: ProgressDataObject
     sub_period: str = Field(alias="subperiod")
 
-    def info(self, full: bool = False) -> str:
+    def info(self) -> str:
         if self.kind:
             return self.kind
-        return f"📅 {self.sub_period}\n\n{self.self.info(full)}"
+        return f"📅 {self.sub_period}\n\n{self.self.info()}"
 
 
 # /rest/additional_materials
@@ -288,5 +272,6 @@ __all__ = (
     "SchoolMeetingsObject",
     "TotalsObject",
     "LessonsScoreObject",
-    "CheckFoodObject"
+    "CheckFoodObject",
+    "ChildObject"
 )

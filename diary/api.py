@@ -1,4 +1,4 @@
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
 from aiohttp import ClientResponse, ClientSession, ContentTypeError, TCPConnector
 from loguru import logger
@@ -33,7 +33,7 @@ class DiaryApi:
         self.diary_session = diary_session
 
     def __str__(self) -> str:
-        return f'<DiaryApi> {self.user.fio}'
+        return f'<DiaryApi {self.user.fio}>'
 
     @property
     def closed(self) -> bool:
@@ -88,53 +88,59 @@ class DiaryApi:
 
             return cls(session, user, diary_cookie.value)
 
-    async def diary(self, from_date: str, to_date: Union[str, None] = None) -> types.DiaryObject:
+    async def diary(self, from_date: str, to_date: Optional[str] = None, *, child: int = 0) -> types.DiaryObject:
         if to_date is None:
             to_date = from_date
 
         return await self._post(types.DiaryObject, "diary", {
-            "pupil_id": self.user.children[0].id,
+            "pupil_id": self.user.children[child].id,
             "from_date": from_date,
             "to_date": to_date
         })
 
-    async def progress_average(self, date: str) -> types.ProgressAverageObject:
+    async def progress_average(self, date: str, *, child: int = 0) -> types.ProgressAverageObject:
         return await self._post(types.ProgressAverageObject, "progress_average", {
-            "pupil_id": self.user.children[0].id,
+            "pupil_id": self.user.children[child].id,
             "date": date
         })
 
-    async def additional_materials(self, lesson_id: int):
+    async def additional_materials(self, lesson_id: int, *, child: int = 0) -> types.AdditionalMaterialsObject:
         return await self._post(types.AdditionalMaterialsObject, "additional_materials", {
-            "pupil_id": self.user.children[0].id,
+            "pupil_id": self.user.children[child].id,
             "lesson_id": lesson_id
         })
 
-    async def school_meetings(self):
+    async def school_meetings(self, *, child: int = 0) -> types.SchoolMeetingsObject:
         return await self._post(types.SchoolMeetingsObject, "school_meetings", {
-            "pupil_id": self.user.children[0].id
+            "pupil_id": self.user.children[child].id
         })
 
-    async def totals(self, date: str):
+    async def totals(self, date: str, *, child: int = 0) -> types.TotalsObject:
         return await self._post(types.TotalsObject, "totals", {
-            "pupil_id": self.user.children[0].id,
+            "pupil_id": self.user.children[child].id,
             "date": date
         })
 
-    async def lessons_scores(self, date: str, subject: Optional[str] = None):
+    async def lessons_scores(
+            self,
+            date: str,
+            subject: Optional[str] = None,
+            *,
+            child: int = 0
+    ) -> types.LessonsScoreObject:
         if subject is None:
             subject = ""
 
         return await self._post(types.LessonsScoreObject, "lessons_scores", {
-            "pupil_id": self.user.children[0].id,
+            "pupil_id": self.user.children[child].id,
             "date": date,
             "subject": subject
         })
 
-    async def logout(self):
+    async def logout(self) -> types.BaseResponse:
         return await self._post(types.BaseResponse, "logout")
 
-    async def check_food(self):
+    async def check_food(self) -> types.CheckFoodObject:
         logger.debug("Request \"check_food\" with data None")
         async with self._session.post(
                 'https://sosh.mon-ra.ru/rest/check_food'

@@ -2,8 +2,9 @@ import datetime
 from typing import Tuple
 
 from vkbottle import BaseStateGroup
-from vkbottle.bot import Blueprint, rules
+from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
+from vkbottle.dispatch.rules.base import FromPeerRule
 from vkbottle.modules import logger
 
 from bot import db
@@ -16,6 +17,7 @@ class AuthState(BaseStateGroup):
     AUTH = 1
 
 
+# todo supporting sunday
 def tomorrow() -> str:
     return (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d.%m.%Y")
 
@@ -24,7 +26,7 @@ def tomorrow() -> str:
 ADMINS = [
     248525108,  # @mironovmeow      | Миронов Данил
 ]
-IsAdmin = rules.FromPeerRule(ADMINS)
+IsAdmin = FromPeerRule(ADMINS)
 
 
 bp = Blueprint(name="Other")  # use for .state_dispenser and .api in functions
