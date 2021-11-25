@@ -38,8 +38,14 @@ async def callback_diary_handler(event: MessageEvent):
 )
 @callback_error_handler.catch
 async def callback_marks_handler(event: MessageEvent):
-    await event.show_snackbar(
-        "🚧 Дневник были обновлен. Вызовите повторно команду \"/дневник\""
+    api: DiaryApi = event.state_peer.payload["api"]
+    payload = event.get_payload_json()
+    date: str = payload["date"]
+    child: int = 0
+    diary = await api.diary(date)
+    await event.edit_message(
+        message=diary.info(event.peer_id != event.user_id),
+        keyboard=keyboards.diary_week(date, api.user.children, child)
     )
 
 
@@ -75,8 +81,20 @@ async def callback_marks_handler(event: MessageEvent):
 )
 @callback_error_handler.catch
 async def callback_marks_handler(event: MessageEvent):
-    await event.show_snackbar(
-        "🚧 Оценки были обновлены. Вызовите повторно команду \"/оценки\""
+    api: DiaryApi = event.state_peer.payload["api"]
+    payload = event.get_payload_json()
+    date: str = payload["date"]
+    count: bool = payload["count"]
+    child: int = 0
+    if count:
+        marks = await api.lessons_scores(date)
+        text = marks.info()
+    else:
+        marks = await api.progress_average(date)
+        text = marks.info()
+    await event.edit_message(
+        message=text,
+        keyboard=keyboards.marks_stats(date, api.user.children, count, child)
     )
 
 
