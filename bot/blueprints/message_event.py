@@ -25,17 +25,10 @@ async def callback_diary_handler(event: MessageEvent):
     child: int = payload["child"]
     lesson_index: int = payload["lesson"]
     diary = await api.diary(date, child=child)
-    if diary.days[0].lessons is not None and len(diary.days[0].lessons) > 0:
-        lesson = diary.days[0].lessons[lesson_index]
-        await event.edit_message(
-            message=lesson.info(event.peer_id != event.user_id, True),
-            keyboard=keyboards.diary_day(date, diary.days[0].lessons, api.user.children, lesson_index, child)
-        )
-    else:
-        await event.edit_message(
-            message=diary.days[0].kind,
-            keyboard=keyboards.diary_day(date, [], api.user.children, lesson_index, child)
-        )
+    await event.edit_message(
+        message=diary.days[0].info(event.peer_id != event.user_id, lesson_index),
+        keyboard=keyboards.diary_day(date, diary.days[0].lessons, api.user.children, lesson_index, child)
+    )
 
 
 @labeler.message_event(
