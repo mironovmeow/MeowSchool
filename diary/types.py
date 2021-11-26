@@ -104,13 +104,28 @@ class DiaryLessonObject(BaseModel):  # TODO
     def date(self) -> datetime.date:
         return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
-    def info(self, is_chat: bool) -> str:  # todo change logic of homework description
-        if is_chat:
-            return f"⌚ {self.lesson[1]}: {self.discipline}\n" + \
-                   "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
+    def get_homework(self):
+        ans = []
+        for homework in self.homework:
+            if homework != "":
+                ans.append("📗 " + homework)
+
+        if ans:
+            return "\n".join(ans)
         else:
-            return f"⌚ {self.lesson[1]}: {self.discipline} {_mark(self.marks)}\n" + \
-                   "\n".join("📗 " + homework if homework else "📙 Нет домашнего задания" for homework in self.homework)
+            return "📙 Нет домашнего задания"
+
+    def info(self, is_chat: bool, full: bool = False) -> str:  # todo change logic of homework description
+        if full:
+            return f"📚 {self.discipline} {_mark(self.marks) if is_chat else ''}\n" \
+                   f"⌚ {self.lesson[1]} ({self.lesson[2]} -- {self.lesson[3]})\n" \
+                   f"👩‍🏫 {self.teacher}\n" \
+                   f"Тема: {self.subject if self.subject else 'Нет темы'}\n\n" \
+                   f"{self.get_homework()}\n\n" \
+                   f"🏫 {self.room}"
+
+        return f"⌚ {self.lesson[1]}: {self.discipline} {_mark(self.marks) if is_chat else ''}\n" \
+               f"{self.get_homework()}"
 
 
 _day_of_week: List[str] = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
@@ -273,5 +288,6 @@ __all__ = (
     "TotalsObject",
     "LessonsScoreObject",
     "CheckFoodObject",
-    "ChildObject"
+    "ChildObject",
+    "DiaryLessonObject"
 )
