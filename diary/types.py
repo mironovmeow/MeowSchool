@@ -143,12 +143,14 @@ class DiaryDayObject(BaseModel):
     def date(self) -> datetime.date:
         return datetime.date(*map(int, self.date_str.split(".")[::-1]))
 
-    def info(self, is_chat: bool) -> str:
+    def info(self, is_chat: bool, lesson_id: Optional[int] = None) -> str:
         text = f"📅 {_day_of_week[self.date.weekday()]} [{self.date_str}]\n\n"
-        if self.lessons:
+        if not self.lessons:
+            text += self.kind
+        elif lesson_id is None:
             text += "\n\n".join(lesson.info(is_chat) for lesson in self.lessons)
         else:
-            text += self.kind
+            text += self.lessons[lesson_id].info(is_chat, True)
         return text
 
 
