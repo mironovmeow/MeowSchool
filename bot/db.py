@@ -1,9 +1,9 @@
 """
-Module to working with database (sqlite3)
+Database module (aiosqlite)
 """
 from typing import List, Optional, Tuple
 
-import aiosqlite
+import aiosqlite  # move to SQLAlchemy
 from vkbottle.modules import logger
 
 db = aiosqlite.connect('db.sqlite3')

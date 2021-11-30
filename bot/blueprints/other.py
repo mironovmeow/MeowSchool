@@ -1,14 +1,17 @@
+"""
+Additional functions with blueprint integration (bp.state_dispenser and bp.api)
+"""
 import datetime
 from typing import Tuple
 
 from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.dispatch.rules.base import FromPeerRule
 from vkbottle.modules import logger
 
 from bot import db
 from diary import APIError, DiaryApi
+from .admin import ADMINS
 
 
 class AuthState(BaseStateGroup):
@@ -22,16 +25,10 @@ def tomorrow() -> str:
     return (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d.%m.%Y")
 
 
+bp = Blueprint(name="Other")
+
+
 # change to admin_chat
-ADMINS = [
-    248525108,  # @mironovmeow      | Миронов Данил
-]
-IsAdmin = FromPeerRule(ADMINS)
-
-
-bp = Blueprint(name="Other")  # use for .state_dispenser and .api in functions
-
-
 async def admin_log(text: str):
     for peer_id in ADMINS:
         await bp.api.messages.send(

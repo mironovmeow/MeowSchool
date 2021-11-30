@@ -1,14 +1,18 @@
+"""Keyboards module"""
 import datetime
 from typing import List
 
 from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
-from diary import ChildObject, DiaryLessonObject
+from diary.types import ChildObject, DiaryLessonObject
 
-SECONDARY = KeyboardButtonColor.SECONDARY
+white = KeyboardButtonColor.SECONDARY
+green = KeyboardButtonColor.POSITIVE
+blue = KeyboardButtonColor.PRIMARY
+red = KeyboardButtonColor.NEGATIVE
 
 
-# keyboard for get diary and select day
+# diary with 6 days and date selector
 def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) -> str:
     today_date = datetime.date.today()
     user_date = datetime.date(*map(int, date_str.split(".")[::-1]))
@@ -21,11 +25,11 @@ def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) ->
 
         date = (user_date - datetime.timedelta(days=user_date.weekday() - i)).strftime("%d.%m.%Y")
         if user_date.weekday() == i:
-            color = KeyboardButtonColor.POSITIVE
+            color = green
         elif today_date.strftime("%d.%m.%Y") == date:
-            color = KeyboardButtonColor.PRIMARY
+            color = blue
         else:
-            color = SECONDARY
+            color = white
         keyboard.add(Callback(
             date,
             {"keyboard": "diary", "date": date, "child": child_id}
@@ -41,7 +45,7 @@ def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) ->
             "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y"),
             "child": child_id
         }
-    ), SECONDARY)
+    ), white)
     keyboard.add(Callback(
         "➕Неделя",
         {
@@ -49,12 +53,12 @@ def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) ->
             "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y"),
             "child": child_id
         }
-    ), SECONDARY)
+    ), white)
 
     keyboard.row()
     keyboard.add(Callback(
         "Подробнее", {"keyboard": "diary", "date": date_str, "child": child_id, "lesson": 0}
-    ), SECONDARY)
+    ), white)
 
     # add user select
     if len(children) > 1:
@@ -63,15 +67,16 @@ def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) ->
             keyboard.add(Callback(
                 child.name,
                 {"keyboard": "diary", "date": date_str, "child": e}
-            ), KeyboardButtonColor.POSITIVE if e == child_id else SECONDARY)
+            ), green if e == child_id else white)
 
     return keyboard.get_json()
 
 
+# diary with lessons and near date selector
 def diary_day(
         date_str: str,
         lessons: List[DiaryLessonObject],
-        children: List[ChildObject],
+        # children: List[ChildObject],  # no user select. workaround. 10 buttons max
         lesson_id: int = 0,
         child_id: int = 0
 ):
@@ -84,7 +89,7 @@ def diary_day(
             keyboard.add(Callback(
                 lesson.discipline[:40],  # workaround. label should be not more than 40 letters
                 {"keyboard": "diary", "date": date_str, "child": child_id, "lesson": e}
-            ), KeyboardButtonColor.POSITIVE if e == lesson_id else SECONDARY)
+            ), green if e == lesson_id else white)
             if e % 2 == 1:
                 keyboard.row()
     if len(lessons) % 2 == 1:
@@ -100,7 +105,7 @@ def diary_day(
                 "child": child_id,
                 "lesson": 0
             }
-        ), SECONDARY)
+        ), white)
         keyboard.add(Callback(
             "➕День",
             {
@@ -109,45 +114,31 @@ def diary_day(
                 "child": child_id,
                 "lesson": 0
             }
-        ), SECONDARY)
+        ), white)
 
     keyboard.row()
     keyboard.add(Callback(
         "Скрыть", {"keyboard": "diary", "date": date_str, "child": child_id}
-    ), SECONDARY)
+    ), white)
 
     # no user select. workaround. 10 buttons max
 
     return keyboard.get_json()
 
 
-def menu() -> str:
-    keyboard = (
-        Keyboard()
-        .add(Text("📗Дневник", payload={"keyboard": "menu", "menu": "diary"}), SECONDARY)
-        .add(Text("🔢Оценки", payload={"keyboard": "menu", "menu": "marks"}), SECONDARY)
-        .row()
-        .add(Text("⚙Настройки", payload={"keyboard": "menu", "menu": "settings"}), SECONDARY)
-    )
-    return keyboard.get_json()
-
-
-def empty() -> str:
-    return Keyboard().get_json()
-
-
+# mark menu
 def marks_stats(date: str, children: List[ChildObject], count: bool = False, child_id: int = 0) -> str:
     keyboard = Keyboard(inline=True)
     if count:
         keyboard.add(Callback(
             "📈 Средний балл",
             {"keyboard": "marks", "date": date, "count": False, "child": child_id}
-        ), SECONDARY)
+        ), white)
     else:
         keyboard.add(Callback(
             "🔢 Статистика по оценкам",
             {"keyboard": "marks", "date": date, "count": True, "child": child_id}
-        ), SECONDARY)
+        ), white)
 
     # add user select
     if len(children) > 1:
@@ -156,6 +147,18 @@ def marks_stats(date: str, children: List[ChildObject], count: bool = False, chi
             keyboard.add(Callback(
                 child.name,
                 {"keyboard": "marks", "date": date, "count": count, "child": e}
-            ), KeyboardButtonColor.POSITIVE if e == child_id else SECONDARY)
+            ), KeyboardButtonColor.POSITIVE if e == child_id else white)
 
     return keyboard.get_json()
+
+
+MENU = (
+    Keyboard()
+    .add(Text("📗Дневник", payload={"keyboard": "menu", "menu": "diary"}), white)
+    .add(Text("🔢Оценки", payload={"keyboard": "menu", "menu": "marks"}), white)
+    .row()
+    .add(Text("⚙Настройки", payload={"keyboard": "menu", "menu": "settings"}), white)
+    .get_json()
+)
+
+EMPTY = Keyboard().get_json()

@@ -1,13 +1,7 @@
-from typing import List
+"""
+Dir with blueprint files
+"""
+from . import other
 
-from vkbottle.framework.abc_blueprint import ABCBlueprint
-
-from . import admin, message_event, other
-from .message import message_bp_list
-
-bp_list: List[ABCBlueprint] = [
-    admin.bp,
-    *message_bp_list,
-    message_event.bp,
-    other.bp,  # for activate bp.state_dispenser and bp.api in functions
-]
+auth_users_and_chats = other.auth_users_and_chats
+admin_log = other.admin_log

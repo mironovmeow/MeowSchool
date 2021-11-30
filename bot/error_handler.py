@@ -1,3 +1,6 @@
+"""
+Error handlers (catch all errors in handlers, vkbottle)
+"""
 from typing import Tuple
 
 from aiohttp import ClientError

@@ -1,3 +1,6 @@
+"""
+All types of Diary API (make on pydantic)
+"""
 import datetime
 from typing import Dict, List, Optional, Sequence, Type, TypeVar, Union
 
@@ -280,14 +283,18 @@ class CheckFoodObject(BaseModel):  # please, contact with me if in your school w
 
 __all__ = (
     "APIError",
+    "BaseResponse",
+    "ChildObject",
     "LoginObject",
+    "DiaryLessonObject",
+    "DiaryDayObject",
     "DiaryObject",
+    "ProgressDataObject",
     "ProgressAverageObject",
     "AdditionalMaterialsObject",
     "SchoolMeetingsObject",
     "TotalsObject",
+    "ScoreObject",
     "LessonsScoreObject",
-    "CheckFoodObject",
-    "ChildObject",
-    "DiaryLessonObject"
+    "CheckFoodObject"
 )

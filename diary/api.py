@@ -1,3 +1,6 @@
+"""
+Api module (on aiohttp)
+"""
 from typing import Optional, Type
 
 from aiohttp import ClientResponse, ClientSession, ContentTypeError, TCPConnector

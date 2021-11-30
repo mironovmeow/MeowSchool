@@ -1,22 +1,24 @@
+"""
+Chat integration (all chat message handler)
+"""
 from typing import Tuple
 
-from vkbottle.bot import Blueprint, BotLabeler, Message
+from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.dispatch.rules.base import ChatActionRule, CommandRule, PeerRule
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
-from bot import db, keyboards
+from bot import db, keyboard
 from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
-labeler = BotLabeler(auto_rules=[PeerRule(True)])
+labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
 
 bp = Blueprint(name="ChatMessage", labeler=labeler)
 
 
-@bp.on.message(ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
+@bp.on.message(rules.ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
 @message_error_handler.catch
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
@@ -34,7 +36,7 @@ async def invite_handler(message: Message):
         logger.info(f"Get new chat: {message.peer_id}")
 
 
-@bp.on.message(CommandRule("стоп") | CommandRule("stop"))
+@bp.on.message(rules.CommandRule("стоп") | rules.CommandRule("stop"))
 @message_error_handler.catch
 async def stop_command(message: Message):
     if not message.state_peer:  # if not auth
@@ -62,7 +64,7 @@ async def stop_command(message: Message):
             logger.info(f"Leave chat: {message.peer_id}")
 
 
-@bp.on.message(CommandRule("помощь") | CommandRule("help"))
+@bp.on.message(rules.CommandRule("помощь") | rules.CommandRule("help"))
 @message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
@@ -76,7 +78,7 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(CommandRule("начать") | CommandRule("start"))
+@bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
 @message_error_handler.catch
 async def start_command(message: Message):
     if message.state_peer is None:  # if chat is not auth
@@ -114,7 +116,7 @@ async def start_command(message: Message):
         )
 
 
-@bp.on.message(CommandRule("дневник", args_count=1) | CommandRule("diary", args_count=1), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -122,12 +124,12 @@ async def diary_command(message: Message, args: Tuple[str]):
     diary = await api.diary(date)
     await message.answer(
         message=diary.info(is_chat=True),
-        keyboard=keyboards.diary_week(date, api.user.children),
+        keyboard=keyboard.diary_week(date, api.user.children),
         dont_parse_links=True
     )
 
 
-@bp.on.message(CommandRule("дневник") | CommandRule("diary"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_tomorrow_command(message: Message):
     return await diary_command(message, (tomorrow(),))  # type: ignore

@@ -1,17 +1,19 @@
+"""
+Private integration (all private message handler)
+"""
 from typing import Tuple
 
-from vkbottle.bot import Blueprint, BotLabeler, Message
+from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.dispatch.rules.base import CommandRule, PayloadRule, PeerRule
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
-from bot import db, keyboards
+from bot import db, keyboard
 from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
 
-labeler = BotLabeler(auto_rules=[PeerRule(False)])
+labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
 bp = Blueprint(name="PrivateMessage", labeler=labeler)
 
@@ -45,7 +47,7 @@ async def password_handler(message: Message):
         await message.answer(
             message="🔓 Вы успешно авторизовались!\n"
                     "Воспользуйтесь кнопками снизу",
-            keyboard=keyboards.menu()
+            keyboard=keyboard.MENU
         )
     except APIError as e:
         if e.json_not_success:
@@ -66,15 +68,15 @@ async def password_handler(message: Message):
             raise e
 
 
-@bp.on.message(PayloadRule({"command": "start"}))  # startup button
-@bp.on.message(CommandRule("начать") | CommandRule("start"))
+@bp.on.message(rules.PayloadRule({"command": "start"}))  # startup button
+@bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
 @message_error_handler.catch
 async def start_handler(message: Message):
     # if user is registered
     if message.state_peer is not None and message.state_peer.state == get_state_repr(AuthState.AUTH):
         await message.answer(
             message="🚧 Вы уже авторизованы. Открываю меню",
-            keyboard=keyboards.menu()
+            keyboard=keyboard.MENU
         )
     else:
         user = await db.get_user(message.peer_id)
@@ -111,7 +113,7 @@ async def start_handler(message: Message):
                     "Для начало работы мне нужен логин и пароль от вышеуказанного сайта.\n\n"
                     "🔒 Отправь первым сообщением логин.",
                     dont_parse_links=True,
-                    keyboard=keyboards.empty()
+                    keyboard=keyboard.EMPTY
                 )
 
         # if user in db
@@ -134,7 +136,7 @@ async def start_handler(message: Message):
 
 # command handlers
 
-@bp.on.message(CommandRule("помощь") | CommandRule("help"))
+@bp.on.message(rules.CommandRule("помощь") | rules.CommandRule("help"))
 @message_error_handler.catch
 async def help_command(message: Message):
     await message.answer(
@@ -150,16 +152,19 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(CommandRule("меню") | CommandRule("menu"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("меню") | rules.CommandRule("menu"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def menu_command(message: Message):
     await message.answer(
         "📗 Открываю меню",
-        keyboard=keyboards.menu()
+        keyboard=keyboard.MENU
     )
 
 
-@bp.on.message(CommandRule("дневник", args_count=1) | CommandRule("diary", args_count=1), state=AuthState.AUTH)
+@bp.on.message(
+    rules.CommandRule("дневник", args_count=1) | rules.CommandRule("diary", args_count=1),
+    state=AuthState.AUTH
+)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -167,18 +172,18 @@ async def diary_command(message: Message, args: Tuple[str]):
     diary = await api.diary(date)
     await message.answer(
         message=diary.info(),
-        keyboard=keyboards.diary_week(date, api.user.children),
+        keyboard=keyboard.diary_week(date, api.user.children),
         dont_parse_links=True
     )
 
 
-@bp.on.message(CommandRule("дневник") | CommandRule("diary"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_empty_command(message: Message):
     return await diary_command(message, (tomorrow(),))  # type: ignore
 
 
-@bp.on.message(CommandRule("оценки", args_count=1) | CommandRule("marks", args_count=1), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule(("оценки", 1)) | rules.CommandRule(("marks", 1)), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def marks_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -186,18 +191,18 @@ async def marks_command(message: Message, args: Tuple[str]):
     marks = await api.progress_average(date)
     await message.answer(
         message=marks.info(),
-        keyboard=keyboards.marks_stats(date, api.user.children),
+        keyboard=keyboard.marks_stats(date, api.user.children),
         dont_parse_links=True
     )
 
 
-@bp.on.message(CommandRule("оценки") | CommandRule("marks"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("оценки") | rules.CommandRule("marks"), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def marks_empty_command(message: Message):
     return await marks_command(message, (tomorrow(),))  # type: ignore
 
 
-@bp.on.message(CommandRule("настройки") | CommandRule("settings"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("настройки") | rules.CommandRule("settings"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def settings_command(message: Message):
     await message.answer(
@@ -230,7 +235,7 @@ async def menu_handler(message: Message):
     else:
         await message.answer(
             message="🚧 Кнопка не найдена...\nВозврат в главное меню",
-            keyboard=keyboards.menu(),
+            keyboard=keyboard.MENU,
             dont_parse_links=True
         )
 

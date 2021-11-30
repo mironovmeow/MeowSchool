@@ -1,8 +1,11 @@
+"""
+MessageEvent integration (all message_event handler, chat and private)
+"""
 from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle_callback import MessageEvent, MessageEventLabeler
 
-from bot import keyboards
+from bot import keyboard
 from bot.blueprints.other import AuthState
 from bot.error_handler import callback_error_handler
 from diary import DiaryApi
@@ -29,12 +32,12 @@ async def callback_diary_handler(event: MessageEvent):
         lesson = diary.days[0].lessons[lesson_index]
         await event.edit_message(
             message=lesson.info(event.peer_id != event.user_id, True),
-            keyboard=keyboards.diary_day(date, diary.days[0].lessons, api.user.children, lesson_index, child)
+            keyboard=keyboard.diary_day(date, diary.days[0].lessons, lesson_index, child)
         )
     else:
         await event.edit_message(
             message=diary.days[0].kind,
-            keyboard=keyboards.diary_day(date, [], api.user.children, lesson_index, child)
+            keyboard=keyboard.diary_day(date, [], lesson_index, child)
         )
 
 
@@ -52,7 +55,7 @@ async def callback_diary_handler(event: MessageEvent):
     diary = await api.diary(date, child=child)
     await event.edit_message(
         message=diary.info(event.peer_id != event.user_id),
-        keyboard=keyboards.diary_week(date, api.user.children, child)
+        keyboard=keyboard.diary_week(date, api.user.children, child)
     )
 
 
@@ -71,7 +74,7 @@ async def callback_marks_handler(event: MessageEvent):
     diary = await api.diary(date, child=child)
     await event.edit_message(
         message=diary.info(event.peer_id != event.user_id),
-        keyboard=keyboards.diary_week(date, api.user.children, child)
+        keyboard=keyboard.diary_week(date, api.user.children, child)
     )
 
 
@@ -95,7 +98,7 @@ async def callback_marks_handler(event: MessageEvent):
         text = marks.info()
     await event.edit_message(
         message=text,
-        keyboard=keyboards.marks_stats(date, api.user.children, count, child)
+        keyboard=keyboard.marks_stats(date, api.user.children, count, child)
     )
 
 
@@ -120,7 +123,7 @@ async def callback_marks_handler(event: MessageEvent):
         text = marks.info()
     await event.edit_message(
         message=text,
-        keyboard=keyboards.marks_stats(date, api.user.children, count, child)
+        keyboard=keyboard.marks_stats(date, api.user.children, count, child)
     )
 
 
