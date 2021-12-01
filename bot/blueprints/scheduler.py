@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
+from bot.db import User
 from diary import DiaryApi, LessonsScoreObject
 
 
@@ -51,9 +52,7 @@ class Marks:
 scheduler = AsyncIOScheduler()
 bp = Blueprint(name="Scheduler")  # use for message_send
 
-DATA: Dict[Tuple[int, int], Dict[Marks, int]] = {  # todo load from database
-    (248525108, 0): {}
-}
+DATA: Dict[Tuple[User, int], Dict[Marks, int]] = {}  # todo load from database
 
 
 def _today() -> str:
@@ -61,7 +60,7 @@ def _today() -> str:
 
 
 @scheduler.scheduled_job("cron", id="marks_job", minute="*/5", timezone="asia/krasnoyarsk")
-async def _marks_job():
+async def marks_job():
     logger.debug("Check new marks")
 
     for user, old_marks in DATA.items():
@@ -87,7 +86,7 @@ async def _marks_job():
                 changed_marks[mark.date].setdefault(mark.lesson, [])
                 for _ in range(old_count - new_count):
                     changed_marks[mark.date][mark.lesson].append(
-                        f"❌ {mark.mark}⃣: {mark.text}"
+                        f"❌ {mark.mark}⃣ {mark.text}"
                     )
 
         if changed_marks:
@@ -103,8 +102,8 @@ async def _marks_job():
             DATA[user] = new_marks
 
 
-async def get_marks(peer_id: int, child_index: int) -> Optional[LessonsScoreObject]:
-    state_peer = await bp.state_dispenser.get(peer_id)
+async def get_marks(user: User, child_index: int) -> Optional[LessonsScoreObject]:
+    state_peer = await bp.state_dispenser.get(user.vk_id)
     if state_peer:
         api: DiaryApi = state_peer.payload["api"]
         return await api.lessons_scores(_today(), child=child_index)
@@ -112,9 +111,8 @@ async def get_marks(peer_id: int, child_index: int) -> Optional[LessonsScoreObje
 
 
 async def start():
-    for user in DATA.keys():
-        # DATA[user] = Marks.from_api(await get_marks(*user))
-        DATA[user] = {}
+    user = await User.get(248525108)
+    DATA[(user, 0)] = Marks.from_api(await get_marks(user, 0))
     scheduler.start()
 
 

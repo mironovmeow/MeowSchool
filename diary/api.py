@@ -57,7 +57,7 @@ class DiaryApi:
 
     @classmethod
     async def auth_by_diary_session(cls, diary_session: str) -> "DiaryApi":
-        logger.info("Request \"login\" with data {\"sessionid\": ...}")
+        logger.debug("Request \"login\" with data {\"sessionid\": ...}")
         session = ClientSession(
             headers={
                 "User-Agent": "MeowApi/1 (vk.com/meow_py)",
@@ -75,7 +75,7 @@ class DiaryApi:
 
     @classmethod
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
-        logger.info("Request \"login\" with data {\"login\": ..., \"password\": ...}")
+        logger.debug("Request \"login\" with data {\"login\": ..., \"password\": ...}")
         session = ClientSession(
             headers={"User-Agent": "MeowApi/1 (vk.com/meow_py)"},
             connector=TCPConnector(ssl=False)

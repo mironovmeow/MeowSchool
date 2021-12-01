@@ -9,8 +9,8 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
 from bot import keyboard
+from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.db import Chat
-from bot.blueprints.other import AuthState, admin_log, delete_chat, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
@@ -25,18 +25,23 @@ async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
         if message.state_peer:  # if auth
             chat = await Chat.get(message.peer_id)
+            user_state_peer = await bp.state_dispenser.get(chat.vk_id)
+            await bp.state_dispenser.set(
+                message.peer_id,
+                AuthState.AUTH,
+                api=user_state_peer.payload["api"],
+                user_id=message.from_id
+            )
 
-            api: DiaryApi = message.state_peer.payload["api"]
-            await api.close()
-            await bp.state_dispenser.delete(message.peer_id)
-
-            if chat:
-                await chat.delete()
-
-        await message.answer(
-            "👋 Спасибо, что вы решили воспользоваться моим ботом. "
-            "🔒 Напишите /начать (/start), что бы авторизовать беседу"
-        )
+            await message.answer(
+                "🔓 Эта беседа уже авторизована! Напишите /помощь (/help) для получения списка всех команд.",
+                reply_to=message.id
+            )
+        else:
+            await message.answer(
+                "👋 Спасибо, что вы решили воспользоваться моим ботом. "
+                "🔒 Напишите /начать (/start), что бы авторизовать беседу"
+            )
         logger.info(f"Get new chat: {message.peer_id}")
 
 
@@ -45,7 +50,7 @@ async def invite_handler(message: Message):
 async def stop_command(message: Message):
     if not message.state_peer:  # if not auth
         await message.answer(
-            "🔒 Сейчас эта беседа не авторизована. Если вы хотите убрать меня, то просто удалите из беседы"
+            "🔒 Эта беседа не авторизована. Если вы хотите убрать меня, то просто удалите из беседы"
         )
     else:  # if auth
         user_id: int = message.state_peer.payload["user_id"]
@@ -55,12 +60,10 @@ async def stop_command(message: Message):
             )
         else:
             await message.answer(
-                "👋 Был рад с вами поработать"
+                "👋 Был рад с вами поработать\n"
+                "🔒 Теперь бота можно удалить из беседы"
             )
             chat = await Chat.get(message.peer_id)
-
-            api: DiaryApi = message.state_peer.payload["api"]
-            await api.close()
             await bp.state_dispenser.delete(message.peer_id)
 
             if chat:
