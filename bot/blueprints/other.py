@@ -9,7 +9,7 @@ from vkbottle.bot import Blueprint
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 
-from bot import db
+from bot.db import User, Chat
 from diary import APIError, DiaryApi
 from .admin import ADMINS
 
@@ -38,37 +38,41 @@ async def admin_log(text: str):
         )
 
 
+async def delete_chat(chat_id: int):
+    ...
+
+
 async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотреть вариант с auth-middleware
     logger.debug("Start auth users from db")
     count_user = 0
-    for peer_id, diary_session, login, password in await db.get_users():
+    for user in await User.get_all():
         try:
-            if diary_session:
-                api = await DiaryApi.auth_by_diary_session(diary_session)
+            if user.diary_session:
+                api = await DiaryApi.auth_by_diary_session(user.diary_session)
             else:
-                api = await DiaryApi.auth_by_login(login, password)
-            await bp.state_dispenser.set(peer_id, AuthState.AUTH, api=api)
-            logger.debug(f"Auth @id{peer_id} complete")
+                api = await DiaryApi.auth_by_login(user.login, user.password)
+            await bp.state_dispenser.set(user.vk_id, AuthState.AUTH, api=api)
+            logger.debug(f"Auth @id{user.vk_id} complete")
             count_user += 1
         except APIError as e:
-            logger.warning(f"Auth @id{peer_id} failed! {e}")
+            logger.warning(f"Auth @id{user.vk_id} failed! {e}")
             await e.session.close()
 
     count_chat = 0
-    for chat_id, user_id in await db.get_chats():
-        user_state_peer = await bp.state_dispenser.get(user_id)
+    for chat in await Chat.get_all():
+        user_state_peer = await bp.state_dispenser.get(chat.vk_id)
 
         # check auth of user
         if user_state_peer is None or user_state_peer.state != get_state_repr(AuthState.AUTH):
-            logger.warning(f"Auth {chat_id} failed! Not found user @id{user_id}")
+            logger.warning(f"Auth {chat.chat_id} failed! Not found user @id{chat.vk_id}")
         else:
             await bp.state_dispenser.set(
-                chat_id,
+                chat.chat_id,
                 AuthState.AUTH,
                 api=user_state_peer.payload["api"],
-                user_id=user_id
+                user_id=chat.vk_id
             )
-            logger.debug(f"Auth {chat_id} complete")
+            logger.debug(f"Auth {chat.chat_id} complete")
             count_chat += 1
 
     await admin_log("Бот запущен.\n"

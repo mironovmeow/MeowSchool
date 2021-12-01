@@ -1,14 +1,15 @@
 """
 Private integration (all private message handler)
 """
-from typing import Tuple
+from typing import Optional, Tuple
 
 from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
-from bot import db, keyboard
+from bot import keyboard
+from bot.db import session, User
 from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
@@ -40,7 +41,7 @@ async def password_handler(message: Message):
         api = await DiaryApi.auth_by_login(login, password)
         await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
 
-        await db.add_user(message.peer_id, login, password)
+        await User.create(message.peer_id, login=login, password=password)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: @id{message.peer_id}")
@@ -79,7 +80,7 @@ async def start_handler(message: Message):
             keyboard=keyboard.MENU
         )
     else:
-        user = await db.get_user(message.peer_id)
+        user: Optional[User] = await session.get(User, message.peer_id)
 
         # if user not registered
         if user is None:
@@ -118,7 +119,7 @@ async def start_handler(message: Message):
 
         # if user in db
         else:
-            login, password = user
+            login, password = user.login, user.password
             try:
                 api = await DiaryApi.auth_by_login(login, password)
                 await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)

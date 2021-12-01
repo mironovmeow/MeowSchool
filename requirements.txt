@@ -1,26 +1,30 @@
-vkbottle @ git+https://github.com/vkbottle/vkbottle.git@dev
-vkbottle-callback @ git+git://github.com/mironovmeow/vkbottle-callback@master
+vkbottle @ git+https://github.com/vkbottle/vkbottle.git@c0c27e7279302bc81b7d313ab17c8da8be3b8267
+vkbottle-callback @ git+git://github.com/mironovmeow/vkbottle-callback@87d3ddca291a2a597141228414057334d5cd2a90
 aiohttp==3.8.1
+aiosignal==1.2.0
 aiosqlite==0.17.0
+APScheduler==3.8.1
 async-timeout==4.0.1
 attrs==21.2.0
-certifi==2021.10.8
-chardet==4.0.0
-charset-normalizer==2.0.7
+backports.zoneinfo==0.2.1
+charset-normalizer==2.0.8
 choicelib==0.1.4
 colorama==0.4.4
-contextvars==2.4
+frozenlist==1.2.0
+greenlet==1.1.2
 idna==3.3
-immutables==0.16
 loguru==0.5.3
 multidict==5.2.0
 pydantic==1.8.2
-requests==2.26.0
+pytz==2021.3
+pytz-deprecation-shim==0.1.0.post0
+six==1.16.0
+SQLAlchemy==1.4.27
 typing-extensions==3.10.0.2
-urllib3==1.26.7
+tzdata==2021.5
+tzlocal==4.1
 vbml==1.1
-vkbottle-types==5.131.129.1
+vkbottle-types==5.131.131.1
 watchgod==0.7
-win32-setctime==1.0.3
+win32-setctime==1.0.4
 yarl==1.7.2
-APScheduler==3.8.1

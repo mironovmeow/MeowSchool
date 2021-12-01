@@ -60,7 +60,7 @@ def _today() -> str:
     return datetime.date.today().strftime("%d.%m.%Y")
 
 
-@scheduler.scheduled_job("cron", id="marks_job", minute="*/5")
+@scheduler.scheduled_job("cron", id="marks_job", minute="*/5", timezone="asia/krasnoyarsk")
 async def _marks_job():
     logger.debug("Check new marks")
 
@@ -91,7 +91,7 @@ async def _marks_job():
                     )
 
         if changed_marks:
-            message = "📚 Изменения в оценках\n\n"
+            message = "🔔 Изменения в оценках\n\n"
             for date, lesson_marks in sorted(changed_marks.items()):
                 message += "📅 " + date + "\n"
                 for lesson, information in sorted(lesson_marks.items()):
@@ -113,7 +113,8 @@ async def get_marks(peer_id: int, child_index: int) -> Optional[LessonsScoreObje
 
 async def start():
     for user in DATA.keys():
-        DATA[user] = Marks.from_api(await get_marks(*user))
+        # DATA[user] = Marks.from_api(await get_marks(*user))
+        DATA[user] = {}
     scheduler.start()
 
 

@@ -1,88 +1,107 @@
 """
-Database module (aiosqlite)
+Database module (sqlalchemy with aiosqlite)
 """
-from typing import List, Optional, Tuple
+from typing import Optional, Iterable
 
-import aiosqlite  # move to SQLAlchemy
+from sqlalchemy import Column, ForeignKey, Integer, String, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base, relationship
 from vkbottle.modules import logger
 
-db = aiosqlite.connect('db.sqlite3')
+Base = declarative_base()
+engine = create_async_engine("sqlite+aiosqlite:///db.sqlite3", future=True)
+session = AsyncSession(bind=engine, expire_on_commit=False)
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    vk_id = Column(Integer, primary_key=True)
+    diary_session = Column(String(length=32))
+    login = Column(String(length=128))
+    password = Column(String(length=128))  # maybe to do something with it?
+
+    chats = relationship("Chat", back_populates="user", cascade="all, delete, delete-orphan")
+
+    @classmethod
+    async def create(
+            cls,
+            vk_id: int,
+            diary_session: Optional[str] = None,
+            login: Optional[str] = None,
+            password: Optional[str] = None
+    ) -> "User":
+        user = cls(vk_id=vk_id, diary_session=diary_session, login=login, password=password)
+        session.add(user)
+        try:
+            await session.flush()
+            await session.commit()
+        except IntegrityError:
+            return await User.get(vk_id)
+        return user
+
+    @classmethod
+    async def get(cls, vk_id: int) -> Optional["User"]:
+        return await session.get(User, vk_id)
+
+    @classmethod
+    async def get_all(cls) -> Iterable["User"]:
+        return (await session.execute(select(User))).scalars()
+
+    async def delete(self):
+        await session.delete(self)
+        await session.commit()
+
+    def __repr__(self):
+        return f"<User(vk_id={self.vk_id}, ...)>"
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+
+    chat_id = Column(Integer, primary_key=True)
+    vk_id = Column(Integer, ForeignKey('users.vk_id'))
+
+    user = relationship("User", back_populates="chats")
+
+    @classmethod
+    async def create(
+            cls,
+            chat_id: int,
+            vk_id: int,
+    ) -> "Chat":
+        chat = cls(chat_id=chat_id, vk_id=vk_id)
+        session.add(chat)
+        try:
+            await session.flush()
+            await session.commit()
+        except IntegrityError:
+            return await Chat.get(chat_id)
+        return chat
+
+    @classmethod
+    async def get(cls, chat_id: int) -> Optional["Chat"]:
+        return await session.get(Chat, chat_id)
+
+    @classmethod
+    async def get_all(cls) -> Iterable["Chat"]:
+        return (await session.execute(select(Chat))).scalars()
+
+    async def delete(self):
+        await session.delete(self)
+        await session.commit()
+
+    def __repr__(self):
+        return f"<Chat(chat_id={self.chat_id}, ...)>"
 
 
 async def start_up():
     logger.debug("Connect to database")
-    await db
-    logger.debug("Create tables")
-    await db.execute("""CREATE TABLE IF NOT EXISTS users (
-    vk_id INT PRIMARY KEY,
-    diary_session VARCHAR (32),
-    login VARCHAR (128),
-    password VARCHAR (128)
-)""")
-    await db.execute("""CREATE TABLE IF NOT EXISTS chats (
-    chat_id INT PRIMARY KEY,
-    vk_id INT NOT NULL
-)""")
-    await db.commit()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 
 async def close():
-    await db.close()
-
-
-async def add_session(vk_id: int, diary_session: str):
-    logger.debug(f"Add session of user: @id{vk_id}")
-    await db.execute("INSERT INTO users (vk_id, diary_session) VALUES (?, ?)", (vk_id, diary_session))
-    await db.commit()
-
-
-async def add_user(vk_id: int, login: str, password: str):
-    logger.debug(f"Add credentials of user: @id{vk_id}")  # todo
-    await db.execute("INSERT INTO users (vk_id, login, password) VALUES (?, ?, ?)", (vk_id, login, password))
-    await db.commit()
-
-
-async def get_user(vk_id: int) -> Optional[Tuple[str, str]]:
-    logger.debug(f"Get user: @id{vk_id}")
-    async with db.execute("SELECT login, password FROM users WHERE vk_id = ?", (vk_id,)) as cur:
-        user: Optional[List[Tuple[str, str]]] = await cur.fetchall()
-        return user[0] if user else None
-
-
-async def get_users() -> List[Tuple[int, Optional[str], Optional[str], Optional[str]]]:
-    logger.debug(f"Get all users")
-    async with db.execute("SELECT vk_id, diary_session, login, password FROM users") as cur:
-        users: Optional[List[Tuple[int, Optional[str], Optional[str], Optional[str]]]] = await cur.fetchall()
-        return users if users else []
-
-
-async def delete_user(vk_id: int):
-    logger.debug(f"Delete user: @id{vk_id}")
-    await db.execute("DELETE FROM users WHERE vk_id = ?", (vk_id,))
-    await db.commit()
-
-
-async def add_chat(chat_id: int, vk_id: int):
-    logger.debug(f"Add chat: {chat_id}")
-    await db.execute("INSERT INTO chats (chat_id, vk_id) VALUES (?, ?)", (chat_id, vk_id))
-    await db.commit()
-
-
-async def get_chat(chat_id: int) -> Optional[Tuple[int]]:
-    logger.debug(f"Get chat: {chat_id}")
-    async with db.execute("SELECT vk_id FROM chats WHERE chat_id = ?", (chat_id,)) as cur:
-        chat: Optional[Tuple[int]] = await cur.fetchall()
-        return chat[0] if chat else None
-
-
-async def get_chats() -> List[Tuple[int, int]]:
-    logger.debug(f"Get all chats")
-    async with db.execute("SELECT chat_id, vk_id FROM chats") as cur:
-        chats = await cur.fetchall()
-        return chats if chats else []
-
-
-async def delete_chat(chat_id: int):
-    logger.debug(f"Delete chat: {chat_id}")
-    await db.execute("DELETE FROM chats WHERE chat_id = ?", (chat_id,))
-    await db.commit()
+    logger.debug("Close connection")
+    await session.close()

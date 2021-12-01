@@ -5,8 +5,8 @@ from vkbottle.bot import Bot
 from vkbottle_callback import MessageEventLabeler
 
 from diary import DiaryApi
-from . import db
-from .blueprints import admin, admin_log, auth_users_and_chats, chat, message_event, other, private, scheduler
+from .db import close, start_up
+from .blueprints import admin, admin_log, chat, message_event, other, private, scheduler, auth_users_and_chats
 from .error_handler import vkbottle_error_handler
 
 if len(sys.argv) < 2:
@@ -17,7 +17,7 @@ TOKEN = sys.argv[1]
 async def _close_session():
     await admin_log("Система отключается.")
     scheduler.stop()
-    await db.close()
+    await close()
     for peer_id, state_peer in bot.state_dispenser.dictionary.items():
         if peer_id < 2000000000:  # if user
             api: DiaryApi = state_peer.payload.get("api")
@@ -28,7 +28,7 @@ async def _close_session():
 labeler = MessageEventLabeler()
 loop_wrapper = LoopWrapper(
     on_startup=[
-        db.start_up(),
+        start_up(),
         auth_users_and_chats(),
         scheduler.start()
     ],

@@ -8,8 +8,9 @@ from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
-from bot import db, keyboard
-from bot.blueprints.other import AuthState, admin_log, tomorrow
+from bot import keyboard
+from bot.db import Chat
+from bot.blueprints.other import AuthState, admin_log, delete_chat, tomorrow
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
 
@@ -23,11 +24,14 @@ bp = Blueprint(name="ChatMessage", labeler=labeler)
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
         if message.state_peer:  # if auth
-            await db.delete_chat(message.peer_id)
+            chat = await Chat.get(message.peer_id)
 
             api: DiaryApi = message.state_peer.payload["api"]
             await api.close()
             await bp.state_dispenser.delete(message.peer_id)
+
+            if chat:
+                await chat.delete()
 
         await message.answer(
             "👋 Спасибо, что вы решили воспользоваться моим ботом. "
@@ -53,12 +57,14 @@ async def stop_command(message: Message):
             await message.answer(
                 "👋 Был рад с вами поработать"
             )
-            await bp.api.messages.remove_chat_user(message.chat_id, member_id=-message.group_id)
-            await db.delete_chat(message.peer_id)
+            chat = await Chat.get(message.peer_id)
 
             api: DiaryApi = message.state_peer.payload["api"]
             await api.close()
             await bp.state_dispenser.delete(message.peer_id)
+
+            if chat:
+                await chat.delete()
 
             await admin_log(f"Бот покинул беседу.\n{message.peer_id}")
             logger.info(f"Leave chat: {message.peer_id}")
@@ -100,7 +106,7 @@ async def start_command(message: Message):
                 user_id=message.from_id
             )
 
-            await db.add_chat(message.peer_id, message.from_id)
+            chat = await Chat.create(message.peer_id, message.from_id)
 
             await message.answer(
                 "🔓 Беседа успешна авторизована! Напишите /помощь (/help) для получения списка всех команд.",
