@@ -59,7 +59,7 @@ def _today() -> str:
     return datetime.date.today().strftime("%d.%m.%Y")
 
 
-@scheduler.scheduled_job("cron", id="marks_job", minute="*/5", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_job", minute="*/5", house="7-23", timezone="asia/krasnoyarsk")
 async def marks_job():
     logger.debug("Check new marks")
 
@@ -98,7 +98,7 @@ async def marks_job():
                     for text in information:
                         message += text + "\n"
                 message += "\n"
-            await bp.api.messages.send(user[0], message=message, random_id=0)
+            await bp.api.messages.send(user[0].vk_id, message=message, random_id=0)
             DATA[user] = new_marks
 
 
