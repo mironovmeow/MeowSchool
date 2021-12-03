@@ -2,7 +2,6 @@
 Additional functions with blueprint integration (bp.state_dispenser and bp.api)
 """
 import datetime
-from typing import Tuple
 
 from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
@@ -37,11 +36,10 @@ async def admin_log(text: str):
         )
 
 
-async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотреть вариант с auth-middleware
+async def auth_users_and_chats():  # todo рассмотреть вариант с auth-middleware
     logger.debug("Start auth users from db")
-    count_user = 0
-    count_chat = 0
-    for user in await User.get_all(chats=True):
+    count_user, count_chat = 0, 0
+    for user in await User.get_all(chats=True, children=True):
         try:
             if user.diary_session:
                 api = await DiaryApi.auth_by_diary_session(user.diary_session)
@@ -68,4 +66,3 @@ async def auth_users_and_chats() -> Tuple[int, int]:  # todo рассмотре�
                     f"🔸 Авторизованных пользователей: {count_user}\n"
                     f"🔸 Авторизованных бесед: {count_chat}")
     logger.info(f"Auth of {count_user} users and {count_chat} chats complete")
-    return count_user, count_chat

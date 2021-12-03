@@ -1,7 +1,7 @@
 """
 Database module (sqlalchemy with aiosqlite)
 """
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, select
 from sqlalchemy.exc import IntegrityError
@@ -18,13 +18,13 @@ session = AsyncSession(bind=_engine, expire_on_commit=False)
 class User(Base):
     __tablename__ = 'users'
 
-    vk_id = Column(Integer, primary_key=True)
+    vk_id = Column(Integer, primary_key=True, nullable=False)
     diary_session = Column(String(length=32))
     login = Column(String(length=128))
     password = Column(String(length=128))  # maybe to do something with it?
 
-    chats = relationship("Chat", back_populates="user", cascade="all, delete, delete-orphan")
-    notify = relationship("Notification", back_populates="user", cascade="all, delete, delete-orphan")
+    chats: List["Chat"] = relationship("Chat", back_populates="user", lazy='selectin', cascade="all, delete-orphan")
+    children: List["Child"] = relationship("Child", back_populates="user", lazy='selectin', cascade="all, delete-orphan")
 
     @classmethod
     async def create(
@@ -40,56 +40,77 @@ class User(Base):
             await session.flush()
             await session.commit()
         except IntegrityError:
-            return await cls.get(vk_id)
+            user = await session.get(User, vk_id)
+            user.diary_session = diary_session
+            user.login = login
+            user.password = password
+            await session.commit()
         return user
 
     @classmethod
-    async def get(cls, vk_id: int) -> Optional["User"]:
-        return await session.get(User, vk_id)
+    async def get(cls, vk_id: int, chats: bool = False, children: bool = False) -> Optional["User"]:
+        stmt = select(cls).where(User.vk_id == vk_id)
+        if chats:
+            stmt = stmt.options(selectinload(cls.chats))
+        if children:
+            stmt = stmt.options(selectinload(cls.children))
+        return (await session.execute(stmt)).one()
 
     @classmethod
-    async def get_all(cls, chats: bool = False, notify: bool = False) -> Iterable["User"]:
+    async def get_all(cls, chats: bool = False, children: bool = False) -> Iterable["User"]:
         stmt = select(cls)
         if chats:
             stmt = stmt.options(selectinload(cls.chats))
-        if notify:
-            stmt = stmt.options(selectinload(cls.notify))
+        if children:
+            stmt = stmt.options(selectinload(cls.children))
         return (await session.execute(stmt)).scalars()
 
     async def delete(self):
         await session.delete(self)
         await session.commit()
 
+    @staticmethod
+    async def save():
+        await session.commit()
+
     def __repr__(self):
         return f"<User(vk_id={self.vk_id}, ...)>"
 
 
-class Notification(Base):
-    __tablename__ = "notify"
+class Child(Base):
+    __tablename__ = "child"
 
     vk_id = Column(Integer, ForeignKey('users.vk_id'), primary_key=True, nullable=False)
     child_id = Column(Integer, primary_key=True, nullable=False)
-    marks = Column(Boolean, nullable=False, default=False)
+    marks = Column(Boolean, default=False, nullable=False)
 
-    user = relationship("User", back_populates="notify")
+    user: List["User"] = relationship("User", lazy="selectin", back_populates="children")
 
     @classmethod
+    # warning! no checking user with vk_id!
     async def create(
             cls,
             vk_id: int,
-            child_id: int
+            child_id: int,
+            marks: bool = False
     ):
-        notify = cls(vk_id=vk_id, child_id=child_id)
-        session.add(notify)
+        child = cls(vk_id=vk_id, child_id=child_id, marks=marks)
+        session.add(child)
         try:
             await session.flush()
             await session.commit()
         except IntegrityError:
-            return await cls.get(vk_id)
-        return notify
+            child = await session.get(Child, (vk_id, child_id))
+            child.marks = marks
+            await session.commit()
+        return child
 
     @classmethod
-    async def get_all(cls, user: bool = False) -> Iterable["Notification"]:
+    async def get(cls, vk_id: int, child_id: int) -> Optional["Child"]:
+        return await session.get(Child, (vk_id, child_id))
+
+    @classmethod
+    async def get_all(cls, user: bool = False) -> Iterable["Child"]:
         stmt = select(cls)
         if user:
             stmt = stmt.options(selectinload(cls.user))
@@ -99,8 +120,12 @@ class Notification(Base):
         await session.delete(self)
         await session.commit()
 
+    @staticmethod
+    async def save():
+        await session.commit()
+
     def __repr__(self):
-        return f"<Notify(vk_id={self.vk_id}, child_id={self.child_id})>"
+        return f"<Child(vk_id={self.vk_id}, child_id={self.child_id})>"
 
 
 class Chat(Base):
@@ -109,9 +134,10 @@ class Chat(Base):
     chat_id = Column(Integer, primary_key=True)
     vk_id = Column(Integer, ForeignKey('users.vk_id'))
 
-    user = relationship("User", back_populates="chats")
+    user: List["User"] = relationship("User", lazy='selectin', back_populates="chats")
 
     @classmethod
+    # warning! no checking user with vk_id!
     async def create(
             cls,
             chat_id: int,
@@ -123,7 +149,9 @@ class Chat(Base):
             await session.flush()
             await session.commit()
         except IntegrityError:
-            return await cls.get(chat_id)
+            chat = await session.get(Chat, chat_id)
+            chat.vk_id = vk_id
+            await session.commit()
         return chat
 
     @classmethod
@@ -139,6 +167,10 @@ class Chat(Base):
 
     async def delete(self):
         await session.delete(self)
+        await session.commit()
+
+    @staticmethod
+    async def save():
         await session.commit()
 
     def __repr__(self):

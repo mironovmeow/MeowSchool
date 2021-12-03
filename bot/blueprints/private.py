@@ -9,8 +9,8 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
 from bot import keyboard
-from bot.db import session, User
 from bot.blueprints.other import AuthState, admin_log, tomorrow
+from bot.db import Child, User, session
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
 
@@ -39,9 +39,15 @@ async def password_handler(message: Message):
     password = message.text
     try:
         api = await DiaryApi.auth_by_login(login, password)
-        await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
-
-        await User.create(message.peer_id, login=login, password=password)
+        await User.create(
+            message.peer_id,
+            login=login,
+            password=password
+        )
+        for child_id in range(len(api.user.children)):
+            await Child.create(message.peer_id, child_id)
+        user = await User.get(vk_id=message.peer_id, children=True)
+        await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api, user=user)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: @id{message.peer_id}")

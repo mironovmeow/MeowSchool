@@ -60,7 +60,7 @@ class DiaryApi:
         logger.debug("Request \"login\" with data {\"sessionid\": ...}")
         session = ClientSession(
             headers={
-                "User-Agent": "MeowApi/1 (vk.com/meow_py)",
+                "User-Agent": "MeowApi/2 (vk.com/schoolbot04)",
                 "Connection": "keep-alive"
             },
             connector=TCPConnector(ssl=False),  # it's bad, i know
@@ -77,8 +77,8 @@ class DiaryApi:
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
         logger.debug("Request \"login\" with data {\"login\": ..., \"password\": ...}")
         session = ClientSession(
-            headers={"User-Agent": "MeowApi/1 (vk.com/meow_py)"},
-            connector=TCPConnector(ssl=False)
+            headers={"User-Agent": "MeowApi/2 (vk.com/schoolbot04)"},
+            connector=TCPConnector(ssl=False)  # it's bad, i know
         )
         async with session.get(
                 f'https://sosh.mon-ra.ru/rest/login?'
