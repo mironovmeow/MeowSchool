@@ -1,10 +1,11 @@
 """Keyboards module"""
 import datetime
-from typing import List
+from typing import List, Optional
 
 from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
 from diary.types import ChildObject, DiaryLessonObject
+from .db import Child, User
 
 white = KeyboardButtonColor.SECONDARY
 green = KeyboardButtonColor.POSITIVE
@@ -73,10 +74,10 @@ def diary_week(date_str: str, children: List[ChildObject], child_id: int = 0) ->
 
 
 # diary with lessons and near date selector
+# todo refactor buttons and rows limit
 def diary_day(
         date_str: str,
         lessons: List[DiaryLessonObject],
-        # children: List[ChildObject],  # no user select. workaround. 10 buttons max
         lesson_id: int = 0,
         child_id: int = 0
 ):
@@ -84,16 +85,16 @@ def diary_day(
     keyboard = Keyboard(inline=True)
 
     # add lesson select
-    if len(lessons) > 1:
-        for e, lesson in enumerate(lessons[:9]):  # workaround. 10 buttons max
+    if len(lessons) > 0:
+        for lesson_index, lesson in enumerate(lessons[:9]):  # workaround. 10 buttons max
             keyboard.add(Callback(
                 lesson.discipline[:40],  # workaround. label should be not more than 40 letters
-                {"keyboard": "diary", "date": date_str, "child": child_id, "lesson": e}
-            ), green if e == lesson_id else white)
-            if e % 2 == 1:
+                {"keyboard": "diary", "date": date_str, "child": child_id, "lesson": lesson_index}
+            ), green if lesson_index == lesson_id else white)
+            if lesson_index % 2 == 1:
                 keyboard.row()
-    if len(lessons) % 2 == 1:
-        keyboard.row()  # workaround. 10 buttons max
+    if len(lessons[:9]) % 2 == 1:
+        keyboard.row()
 
     if len(lessons) <= 7:  # workaround. 10 buttons max
         # add day control menu
@@ -126,7 +127,7 @@ def diary_day(
     return keyboard.get_json()
 
 
-# mark menu
+# marks menu
 def marks_stats(date: str, children: List[ChildObject], count: bool = False, child_id: int = 0) -> str:
     keyboard = Keyboard(inline=True)
     if count:
@@ -147,7 +148,7 @@ def marks_stats(date: str, children: List[ChildObject], count: bool = False, chi
             keyboard.add(Callback(
                 child.name,
                 {"keyboard": "marks", "date": date, "count": count, "child": e}
-            ), KeyboardButtonColor.POSITIVE if e == child_id else white)
+            ), green if e == child_id else white)
 
     return keyboard.get_json()
 
@@ -162,3 +163,38 @@ MENU = (
 )
 
 EMPTY = Keyboard().get_json()
+
+
+def settings(user: Optional[User] = None, child: Optional[Child] = None):
+    keyboard = Keyboard(inline=True)
+    if user and len(user.children) == 1:
+        child = user.children[0]
+
+    if child:
+        keyboard.add(
+            Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks", "child_id": child.child_id}),
+            green if child.marks > 0 else white
+        )
+    elif user:
+        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)
+    else:
+        raise TypeError("Need or user, or child")
+    return keyboard.get_json()
+
+
+# todo refactor buttons and rows limit
+def settings_marks(user: User, children: List[ChildObject]):
+    keyboard = Keyboard(inline=True)
+
+    for child_index, child in enumerate(user.children[:9]):  # workaround. 10 buttons max
+        child_api = children[child_index]
+        keyboard.add(Callback(
+            child_api.name[:40],  # workaround. label should be not more than 40 letters
+            {"keyboard": "settings", "settings": "marks_child_select", "child_id": child.child_id}
+        ), green if child.marks > 0 else white)
+        if child_index % 2 == 1:
+            keyboard.row()
+    if len(user.children[:9]) % 2 == 1:
+        keyboard.row()  # workaround. 6 rows max
+    keyboard.add(Callback("Вернуться", {"keyboard": "settings"}))
+    return keyboard.get_json()

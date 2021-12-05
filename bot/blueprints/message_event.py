@@ -8,9 +8,11 @@ from vkbottle.bot import Blueprint, MessageEvent
 from vkbottle.dispatch.dispenser import get_state_repr
 
 from bot import keyboard
-from bot.blueprints.other import AuthState
+from bot.db import Child, User
 from bot.error_handler import callback_error_handler
 from diary import DiaryApi
+from . import scheduler
+from .other import AuthState
 
 bp = Blueprint(name="MessageEvent")
 
@@ -32,7 +34,7 @@ class StateRule(ABCRule[MessageEvent]):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(AuthState.AUTH),
-    payload_map={"keyboard": str, "date": str, "child": int, "lesson": int},
+    payload_map={"date": str, "child": int, "lesson": int},
     payload_contains={"keyboard": "diary"}
 )
 @callback_error_handler.catch
@@ -61,7 +63,7 @@ async def callback_diary_day_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(AuthState.AUTH),
-    payload_map={"keyboard": str, "date": str, "child": int},
+    payload_map={"date": str, "child": int},
     payload_contains={"keyboard": "diary"}
 )
 @callback_error_handler.catch
@@ -82,7 +84,7 @@ async def callback_diary_week_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(AuthState.AUTH),
-    payload_map={"keyboard": str, "date": str, "count": bool, "child": int},
+    payload_map={"date": str, "count": bool, "child": int},
     payload_contains={"keyboard": "marks"}
 )
 @callback_error_handler.catch
@@ -102,6 +104,78 @@ async def callback_marks_handler(event: MessageEvent):
     await event.edit_message(
         message=text,
         keyboard=keyboard.marks_stats(date, api.user.children, count, child)
+    )
+
+
+async def change_child_marks(child: Child) -> str:
+    if child.marks == 0:
+        await scheduler.add(child)
+        child.marks = 1
+        text = "Уведомления об оценках включены"
+    elif child.marks == 1:
+        await scheduler.delete(child)
+        child.marks = 0
+        text = "Уведомления об оценках выключены"
+    else:
+        text = "Пока нельзя выключить донатные уведомления"
+    await child.save()
+    return text
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(AuthState.AUTH),
+    payload_contains={"keyboard": "settings", "settings": "marks_child_select"}
+)
+async def callback_settings_marks_child_handler(event: MessageEvent):
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    api: DiaryApi = state_peer.payload["api"]
+    user: User = state_peer.payload["user"]
+
+    child_id = event.get_payload_json().get("child_id")
+    if child_id and type(child_id) == int:
+        await event.show_snackbar(await change_child_marks(user.children[child_id]))
+    await event.edit_message(
+        message="⚙ Настройки уведомлений об оценках",
+        keyboard=keyboard.settings_marks(user, api.user.children)
+    )
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(AuthState.AUTH),
+    payload_map={"child_id": int},
+    payload_contains={"keyboard": "settings", "settings": "marks"}
+)
+async def callback_settings_marks_handler(event: MessageEvent):
+    child_id = event.get_payload_json()["child_id"]
+
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    user: User = state_peer.payload["user"]
+    child = user.children[child_id]
+
+    await event.show_snackbar(await change_child_marks(user.children[child_id]))
+    await event.edit_message(
+        message="⚙ Настройки",
+        keyboard=keyboard.settings(child=child)
+    )
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(AuthState.AUTH),
+    payload_contains={"keyboard": "settings", "settings": "marks"}
+)
+async def callback_settings_handler(event: MessageEvent):
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    user: User = state_peer.payload["user"]
+
+    await event.edit_message(
+        message="⚙ Настройки",
+        keyboard=keyboard.settings(user)
     )
 
 

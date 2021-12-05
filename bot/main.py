@@ -4,7 +4,7 @@ from vkbottle import LoopWrapper
 from vkbottle.bot import Bot
 
 from diary import DiaryApi
-from .blueprints import admin, admin_log, auth_users_and_chats, chat, message_event, other, private, scheduler
+from .blueprints import admin, chat, message_event, other, private, scheduler
 from .db import close, start_up
 from .error_handler import vkbottle_error_handler
 
@@ -14,7 +14,7 @@ TOKEN = sys.argv[1]
 
 
 async def _close_session():
-    await admin_log("Система отключается.")
+    await other.admin_log("Система отключается.")
     scheduler.stop()
     await close()
     for peer_id, state_peer in bot.state_dispenser.dictionary.items():
@@ -27,7 +27,7 @@ async def _close_session():
 loop_wrapper = LoopWrapper(
     on_startup=[
         start_up(),
-        auth_users_and_chats(),
+        other.auth_users_and_chats(),
         scheduler.start()
     ],
     on_shutdown=[

@@ -9,10 +9,11 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
 from bot import keyboard
-from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.db import Child, User, session
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
+from . import scheduler
+from .other import AuthState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
@@ -46,7 +47,7 @@ async def password_handler(message: Message):
         )
         for child_id in range(len(api.user.children)):
             await Child.create(message.peer_id, child_id)
-        user = await User.get(vk_id=message.peer_id, children=True)
+        user = await User.get(vk_id=message.peer_id, chats=True, children=True)
         await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api, user=user)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
@@ -212,9 +213,24 @@ async def marks_empty_command(message: Message):
 @bp.on.message(rules.CommandRule("настройки") | rules.CommandRule("settings"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def settings_command(message: Message):
+    user: User = message.state_peer.payload["user"]
     await message.answer(
-        message="🚧 Сейчас здесь ничего нет, но скоро будет..."
+        message="⚙ Настройки",
+        keyboard=keyboard.settings(user)
     )
+
+
+# promo command
+@bp.on.message(rules.CommandRule("врядликтотобудетчитатьисходникиинайдётпасхалку"), state=AuthState.AUTH)
+@message_error_handler.catch
+async def easter_egg_command(message: Message):
+    user: User = message.state_peer.payload["user"]
+    for child in user.children:
+        child.marks = 3
+        await scheduler.add(child)
+    await user.save()
+
+    await message.answer("Молодец. Теперь у тебя почти самые крутые уведомления.")
 
 
 @bp.on.message(text="/<command>", state=AuthState.AUTH)

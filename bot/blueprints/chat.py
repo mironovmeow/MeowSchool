@@ -9,10 +9,10 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
 from bot import keyboard
-from bot.blueprints.other import AuthState, admin_log, tomorrow
 from bot.db import Chat
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
+from .other import AuthState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
 

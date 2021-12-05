@@ -10,6 +10,7 @@ from vkbottle.bot import Message, MessageEvent
 
 from diary.types import APIError
 from .blueprints.other import admin_log
+from .db import Child
 
 message_error_handler = ErrorHandler(redirect_arguments=True)
 
@@ -112,3 +113,13 @@ async def vkbottle_handler_aiohttp(e: ClientError):
 @vkbottle_error_handler.register_undefined_error_handler
 async def vkbottle_handler_undefined(_: BaseException):
     logger.exception("Error in vkbottle module")
+
+
+scheduler_error_handler = ErrorHandler(True)
+
+
+@scheduler_error_handler.register_error_handler(APIError)
+async def scheduler_handler_diary_api(e: APIError, child: Child):
+    logger.warning(f"Server error {e}")
+
+# todo add more errors (for handling, of course)

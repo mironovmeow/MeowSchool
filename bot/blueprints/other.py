@@ -9,7 +9,10 @@ from vkbottle.modules import logger
 
 from bot.db import User
 from diary import APIError, DiaryApi
-from .admin import ADMINS
+
+ADMINS = [
+    248525108,  # @mironovmeow      | Миронов Данил
+]
 
 
 class AuthState(BaseStateGroup):
@@ -45,7 +48,7 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
                 api = await DiaryApi.auth_by_diary_session(user.diary_session)
             else:
                 api = await DiaryApi.auth_by_login(user.login, user.password)
-            await bp.state_dispenser.set(user.vk_id, AuthState.AUTH, api=api)
+            await bp.state_dispenser.set(user.vk_id, AuthState.AUTH, api=api, user=user)
             logger.debug(f"Auth @id{user.vk_id} complete")
             count_user += 1
 

@@ -3,7 +3,7 @@ Database module (sqlalchemy with aiosqlite)
 """
 from typing import Iterable, List, Optional
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, select
+from sqlalchemy import Column, ForeignKey, Integer, String, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, selectinload
@@ -54,7 +54,7 @@ class User(Base):
             stmt = stmt.options(selectinload(cls.chats))
         if children:
             stmt = stmt.options(selectinload(cls.children))
-        return (await session.execute(stmt)).one()
+        return (await session.execute(stmt)).one()[0]
 
     @classmethod
     async def get_all(cls, chats: bool = False, children: bool = False) -> Iterable["User"]:
@@ -82,9 +82,9 @@ class Child(Base):
 
     vk_id = Column(Integer, ForeignKey('users.vk_id'), primary_key=True, nullable=False)
     child_id = Column(Integer, primary_key=True, nullable=False)
-    marks = Column(Boolean, default=False, nullable=False)
+    marks = Column(Integer, default=False, nullable=False)
 
-    user: List["User"] = relationship("User", lazy="selectin", back_populates="children")
+    user: "User" = relationship("User", lazy="selectin", back_populates="children")
 
     @classmethod
     # warning! no checking user with vk_id!
@@ -134,7 +134,7 @@ class Chat(Base):
     chat_id = Column(Integer, primary_key=True)
     vk_id = Column(Integer, ForeignKey('users.vk_id'))
 
-    user: List["User"] = relationship("User", lazy='selectin', back_populates="chats")
+    user: "User" = relationship("User", lazy='selectin', back_populates="chats")
 
     @classmethod
     # warning! no checking user with vk_id!
