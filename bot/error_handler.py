@@ -6,8 +6,7 @@ from typing import Tuple
 from aiohttp import ClientError
 from loguru import logger
 from vkbottle import ErrorHandler, VKAPIError
-from vkbottle.bot import Message
-from vkbottle_callback import MessageEvent
+from vkbottle.bot import Message, MessageEvent
 
 from diary.types import APIError
 from .blueprints.other import admin_log

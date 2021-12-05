@@ -2,11 +2,10 @@ import sys
 
 from vkbottle import LoopWrapper
 from vkbottle.bot import Bot
-from vkbottle_callback import MessageEventLabeler
 
 from diary import DiaryApi
+from .blueprints import admin, admin_log, auth_users_and_chats, chat, message_event, other, private, scheduler
 from .db import close, start_up
-from .blueprints import admin, admin_log, chat, message_event, other, private, scheduler, auth_users_and_chats
 from .error_handler import vkbottle_error_handler
 
 if len(sys.argv) < 2:
@@ -25,7 +24,6 @@ async def _close_session():
                 await api.close()
 
 
-labeler = MessageEventLabeler()
 loop_wrapper = LoopWrapper(
     on_startup=[
         start_up(),
@@ -37,7 +35,7 @@ loop_wrapper = LoopWrapper(
     ]
 )
 
-bot = Bot(TOKEN, labeler=labeler, loop_wrapper=loop_wrapper, error_handler=vkbottle_error_handler)
+bot = Bot(TOKEN, loop_wrapper=loop_wrapper, error_handler=vkbottle_error_handler)
 
 bps = [admin.bp, chat.bp, message_event.bp, other.bp, private.bp, scheduler.bp]
 

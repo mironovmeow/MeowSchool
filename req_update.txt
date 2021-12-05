@@ -1,0 +1,12 @@
+# vk bot
+vkbottle @ git+https://github.com/vkbottle/vkbottle.git@dev
+APScheduler
+
+# database
+sqlalchemy
+aiosqlite
+
+# diary api
+aiohttp
+pydantic
+loguru
