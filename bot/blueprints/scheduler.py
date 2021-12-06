@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
+from bot.blueprints.other import admin_log
 from bot.db import Child, select, session
 from bot.error_handler import scheduler_error_handler
 from diary import DiaryApi
@@ -153,9 +154,17 @@ async def admin_scheduler():
 
 
 async def start():
+    child_count = 0
+
     child: Child
     for child in (await session.execute(select(Child).where(Child.marks > 0))).scalars():
+        child_count += 1
         DATA[child] = await Marks.from_api(child)
+
+    await admin_log(
+        "Уведомления запущены.\n"
+        f"🔸 Уведомления: {child_count}"
+    )
     scheduler.start()
 
 

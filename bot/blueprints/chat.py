@@ -109,10 +109,10 @@ async def start_command(message: Message):
                 user_id=message.from_id
             )
 
-            chat = await Chat.create(message.peer_id, message.from_id)
+            await Chat.create(message.peer_id, message.from_id)
 
             await message.answer(
-                "🔓 Беседа успешна авторизована! Напишите /помощь (/help) для получения списка всех команд.",
+                "🔓 Беседа авторизована успешно! Напишите /помощь (/help) для получения списка всех команд.",
                 reply_to=message.id
             )
             await admin_log(f"Новая беседа авторизована.\n{message.peer_id}")

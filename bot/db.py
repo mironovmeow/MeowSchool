@@ -3,7 +3,7 @@ Database module (sqlalchemy with aiosqlite)
 """
 from typing import Iterable, List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, String, select
+from sqlalchemy import Column, ForeignKey, Integer, String, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, selectinload
@@ -54,7 +54,7 @@ class User(Base):
             stmt = stmt.options(selectinload(cls.chats))
         if children:
             stmt = stmt.options(selectinload(cls.children))
-        return (await session.execute(stmt)).one()[0]
+        return (await session.execute(stmt)).scalar_one()
 
     @classmethod
     async def get_all(cls, chats: bool = False, children: bool = False) -> Iterable["User"]:
@@ -72,6 +72,10 @@ class User(Base):
     @staticmethod
     async def save():
         await session.commit()
+
+    @staticmethod
+    async def count() -> int:
+        return (await session.execute(select(func.count(User.vk_id)))).scalar_one()
 
     def __repr__(self):
         return f"<User(vk_id={self.vk_id}, ...)>"
@@ -124,6 +128,10 @@ class Child(Base):
     async def save():
         await session.commit()
 
+    @staticmethod
+    async def marks_count() -> int:
+        return (await session.execute(select(func.count(Child.vk_id)).where(Child.marks > 0))).scalar_one()
+
     def __repr__(self):
         return f"<Child(vk_id={self.vk_id}, child_id={self.child_id})>"
 
@@ -172,6 +180,10 @@ class Chat(Base):
     @staticmethod
     async def save():
         await session.commit()
+
+    @staticmethod
+    async def count() -> int:
+        return (await session.execute(select(func.count(Chat.vk_id)))).scalar_one()
 
     def __repr__(self):
         return f"<Chat(chat_id={self.chat_id}, ...)>"

@@ -229,7 +229,7 @@ async def easter_egg_command(message: Message):
         child.marks = 3
         await scheduler.add(child)
     await user.save()
-
+    await admin_log(f"@id{message.peer_id} активировал пасхалку")
     await message.answer("Молодец. Теперь у тебя почти самые крутые уведомления.")
 
 

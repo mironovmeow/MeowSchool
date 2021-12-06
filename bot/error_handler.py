@@ -34,6 +34,15 @@ async def message_handler_diary_api(e: APIError, m: Message):
         await admin_log("В error_handler.py ошибка (1)")  # Это не должно произойти
 
 
+@message_error_handler.register_error_handler(VKAPIError[9])
+async def message_handler_vk_api_9(e: VKAPIError, m: Message):
+    logger.info(f"VKApi flood error {e.description} {e.code}")
+    try:
+        await m.answer("🚧 Мне кажется, или ты начал флудить?")
+    except VKAPIError[9]:  # todo?
+        ...
+
+
 @message_error_handler.register_error_handler(VKAPIError)
 async def message_handler_vk_api(e: VKAPIError, m: Message):
     logger.warning(f"VKApi error {e.description} {e.code}")
@@ -65,6 +74,15 @@ async def callback_handler_diary_api(e: APIError, event: MessageEvent):
 
     else:
         await admin_log("В error_handler.py ошибка (2)")  # Это не должно произойти
+
+
+@callback_error_handler.register_error_handler(VKAPIError[9])
+async def callback_handler_vk_api_9(e: VKAPIError, event: MessageEvent):
+    logger.info(f"VKApi flood error {e.description} {e.code}")
+    try:
+        await event.show_snackbar("🚧 Мне кажется, или ты начал флудить?")
+    except VKAPIError[9]:  # todo?
+        ...
 
 
 @callback_error_handler.register_error_handler(VKAPIError[909])

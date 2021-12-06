@@ -37,7 +37,7 @@ loop_wrapper = LoopWrapper(
 
 bot = Bot(TOKEN, loop_wrapper=loop_wrapper, error_handler=vkbottle_error_handler)
 
-bps = [admin.bp, chat.bp, message_event.bp, other.bp, private.bp, scheduler.bp]
+bps = [admin.bp, chat.bp, private.bp, message_event.bp, other.bp, scheduler.bp]
 
 for bp in bps:
     bp.load(bot)

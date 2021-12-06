@@ -66,6 +66,6 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
             await e.session.close()
 
     await admin_log("Бот запущен.\n"
-                    f"🔸 Авторизованных пользователей: {count_user}\n"
-                    f"🔸 Авторизованных бесед: {count_chat}")
+                    f"🔸 Пользователи: {count_user}\n"
+                    f"🔸 Беседы: {count_chat}")
     logger.info(f"Auth of {count_user} users and {count_chat} chats complete")
