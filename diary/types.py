@@ -272,7 +272,10 @@ class LessonsScoreObject(BaseResponse):
 
     def info(self):
         if self.data is None or len(self.data) == 0:
-            return self.kind
+            if self.kind:
+                return self.kind
+            else:
+                return self.sub_period
         return f"📅 {self.sub_period}\n\n" + \
                "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 

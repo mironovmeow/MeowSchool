@@ -2,7 +2,7 @@
 Schedulers module (marks notification)
 """
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from vkbottle.bot import Blueprint
@@ -28,7 +28,7 @@ class Marks:
         self.mark = mark
 
     @classmethod
-    async def from_api(cls, child: Child) -> Dict["Marks", int]:
+    async def from_api(cls, child: Child) -> Tuple[Dict["Marks", int], Optional[str]]:
         state_peer = await bp.state_dispenser.get(child.vk_id)
         if state_peer:  # todo обработка удаления state_peer
             api: DiaryApi = state_peer.payload["api"]
@@ -41,8 +41,8 @@ class Marks:
                             marks = cls(lesson, score.date, text, mark_int)
                             ans.setdefault(marks, 0)
                             ans[marks] += 1
-            return ans
-        return {}
+            return ans, lessons_score.sub_period
+        return {}, None
 
     def __hash__(self):
         return hash((self.lesson, self.date, self.text, self.mark))
@@ -64,7 +64,7 @@ admin_stmt = select(Child).where(Child.marks == 4)
 scheduler = AsyncIOScheduler()
 bp = Blueprint(name="Scheduler")  # use for message_send
 
-DATA: Dict[Child, Dict[Marks, int]] = {}
+DATA: Dict[Child, Tuple[Dict[Marks, int], Optional[str]]] = {}
 
 
 def _today() -> str:
@@ -73,11 +73,12 @@ def _today() -> str:
 
 @scheduler_error_handler.catch
 async def marks_job(child: Child):
-    if DATA.get(child, None) is None:
-        DATA[child] = await Marks.from_api(child)
-        return
-    old_marks = DATA[child]
-    new_marks = await Marks.from_api(child)
+    old_marks, old_period = DATA[child]
+    new_marks, new_period = await Marks.from_api(child)
+
+    if old_period != new_period:  # new period
+        await bp.api.messages.send(child.vk_id, message=f"🔔 Изменение периода: {new_period}", random_id=0)
+        old_marks = {}
 
     changed_marks: Dict[str, Dict[str, List[str]]] = {}  # date: {lesson: [information]}
 
@@ -118,11 +119,11 @@ async def marks_job(child: Child):
                     message += text + "\n"
             message += "\n"
         await bp.api.messages.send(child.vk_id, message=message, random_id=0)
-        DATA[child] = new_marks
+        DATA[child] = new_marks, new_period
 
 
 # every two hours
-@scheduler.scheduled_job("cron", id="marks_job", hour="7-23/2", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_default_job", hour="7-23/2", timezone="asia/krasnoyarsk")
 async def default_scheduler():
     logger.debug("Check default new marks")
     for child in (await session.execute(default_stmt)).scalars():
@@ -130,7 +131,7 @@ async def default_scheduler():
 
 
 # every 15 minutes
-@scheduler.scheduled_job("cron", id="marks_job", minute="*/15", hour="7-23", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_donut_job", minute="*/15", hour="7-23", timezone="asia/krasnoyarsk")
 async def donut_scheduler():
     logger.debug("Check donut new marks")
     for child in (await session.execute(donut_stmt)).scalars():
@@ -138,7 +139,7 @@ async def donut_scheduler():
 
 
 # every 5 minutes
-@scheduler.scheduled_job("cron", id="marks_job", minute="*/5", hour="7-23", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_vip_job", minute="*/5", hour="7-23", timezone="asia/krasnoyarsk")
 async def vip_scheduler():
     logger.debug("Check vip new marks")
     for child in (await session.execute(vip_stmt)).scalars():
@@ -146,7 +147,7 @@ async def vip_scheduler():
 
 
 # every 2 minutes
-@scheduler.scheduled_job("cron", id="marks_job", minute="*/2", hour="7-23", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_admin_job", minute="*/2", hour="7-23", timezone="asia/krasnoyarsk")
 async def admin_scheduler():
     logger.debug("Check admin new marks")
     for child in (await session.execute(admin_stmt)).scalars():

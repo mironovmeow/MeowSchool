@@ -18,7 +18,13 @@ async def _check_response(r: ClientResponse, session: ClientSession) -> dict:
         json = await r.json()
         logger.debug(f"Response with {json}")
 
-        if json.get("success") is False:
+        error, success = json.get("error"), json.get("success", False)
+
+        if error is not None:  # {"error": "Произошла непредвиденная ошибка ..."}
+            json["success"] = False
+            json["kind"] = json["error"]
+
+        if success is False:
             logger.info(f"Request failed. Not success.")
             raise types.APIError(r, session, json=json)
 

@@ -5,6 +5,7 @@ from typing import Tuple
 
 from aiohttp import ClientError
 from loguru import logger
+from pydantic import ValidationError
 from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message, MessageEvent
 
@@ -16,7 +17,7 @@ message_error_handler = ErrorHandler(redirect_arguments=True)
 
 
 @message_error_handler.register_error_handler(APIError)
-async def message_handler_diary_api(e: APIError, m: Message):
+async def message_diary(e: APIError, m: Message):
     if not e.resp.ok:
         if e.resp.status == 401:
             logger.info(f"Re-auth {m.peer_id}")
@@ -35,8 +36,8 @@ async def message_handler_diary_api(e: APIError, m: Message):
 
 
 @message_error_handler.register_error_handler(VKAPIError[9])
-async def message_handler_vk_api_9(e: VKAPIError, m: Message):
-    logger.info(f"VKApi flood error {e.description} {e.code}")
+async def message_vk_9(e: VKAPIError, m: Message):
+    logger.info(f"VKApi flood error: {e.description} {e.code}")
     try:
         await m.answer("🚧 Мне кажется, или ты начал флудить?")
     except VKAPIError[9]:  # todo?
@@ -44,13 +45,20 @@ async def message_handler_vk_api_9(e: VKAPIError, m: Message):
 
 
 @message_error_handler.register_error_handler(VKAPIError)
-async def message_handler_vk_api(e: VKAPIError, m: Message):
-    logger.warning(f"VKApi error {e.description} {e.code}")
+async def message_vk(e: VKAPIError, m: Message):
+    logger.warning(f"VKApi error: {e.description} {e.code}")
     await m.answer("🚧 Неизвестная ошибка с VK 0_o")
 
 
+@message_error_handler.register_error_handler(ValidationError)
+async def message_pydantic(e: ValidationError, m: Message):  # diary.types
+    logger.error(f"Pydantic error\n{e}")
+    await m.answer("🚧 Ошибка сервера. Уже известно, чиним")
+    await admin_log(f"Ошибка в типах у {e.model.__name__}")
+
+
 @message_error_handler.register_undefined_error_handler
-async def message_handler(e: BaseException, m: Message):
+async def message(e: BaseException, m: Message):
     logger.exception(f"Undefined error {e}")
     await m.answer("🚧 Неизвестная ошибка 0_o")
 
@@ -59,7 +67,7 @@ callback_error_handler = ErrorHandler(redirect_arguments=True)
 
 
 @callback_error_handler.register_error_handler(APIError)
-async def callback_handler_diary_api(e: APIError, event: MessageEvent):
+async def callback_diary(e: APIError, event: MessageEvent):
     if not e.resp.ok:
         if e.resp.status == 401:
             logger.info(f"Re-auth {event.peer_id}")
@@ -77,8 +85,8 @@ async def callback_handler_diary_api(e: APIError, event: MessageEvent):
 
 
 @callback_error_handler.register_error_handler(VKAPIError[9])
-async def callback_handler_vk_api_9(e: VKAPIError, event: MessageEvent):
-    logger.info(f"VKApi flood error {e.description} {e.code}")
+async def callback_vk_9(e: VKAPIError, event: MessageEvent):
+    logger.info(f"VKApi flood error: {e.description} {e.code}")
     try:
         await event.show_snackbar("🚧 Мне кажется, или ты начал флудить?")
     except VKAPIError[9]:  # todo?
@@ -86,19 +94,26 @@ async def callback_handler_vk_api_9(e: VKAPIError, event: MessageEvent):
 
 
 @callback_error_handler.register_error_handler(VKAPIError[909])
-async def callback_handler_vk_api_909(e: VKAPIError, event: MessageEvent):
-    logger.info(f"VKApi edit message error {e.description} {e.code}")
+async def callback_vk_909(e: VKAPIError, event: MessageEvent):
+    logger.info(f"VKApi edit message error: {e.description} {e.code}")
     await event.show_snackbar("🚧 Сообщение слишком старое. Ещё раз напишите команду или нажмите на кнопку в меню")
 
 
 @callback_error_handler.register_error_handler(VKAPIError)
-async def callback_handler_vk_api(e: VKAPIError, event: MessageEvent):
+async def callback_vk(e: VKAPIError, event: MessageEvent):
     logger.warning(f"VKApi error {e.description} {e.code}")
     await event.show_snackbar("🚧 Неизвестная ошибка с VK 0_o")
 
 
+@callback_error_handler.register_error_handler(ValidationError)
+async def callback_pydantic(e: ValidationError, event: MessageEvent):  # diary.types
+    logger.error(f"Pydantic error\n{e}")
+    await event.show_snackbar("🚧 Ошибка сервера. Уже известно, чиним")
+    await admin_log(f"Ошибка в типах у {e.model.__name__}")
+
+
 @callback_error_handler.register_undefined_error_handler
-async def callback_handler(e: BaseException, event: MessageEvent):
+async def callback(e: BaseException, event: MessageEvent):
     logger.exception(f"Undefined error {e}")
     await event.show_snackbar("🚧 Неизвестная ошибка 0_o")
 
@@ -106,17 +121,18 @@ async def callback_handler(e: BaseException, event: MessageEvent):
 diary_date_error_handler = ErrorHandler(redirect_arguments=True)
 
 
+# todo add data checking on server side
 @diary_date_error_handler.register_error_handler(APIError)
-async def diary_date_handler(e: APIError, m: Message, args: Tuple[str]):  # todo add data checking on server side
+async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
     if e.json_not_success:
-        logger.debug(f"{e}: Wrong date {args[0]}")
+        logger.info(f"{e}: Wrong date {args[0]}")
         await m.answer("🚧 Указана неверная дата. Попробуйте ещё раз")
     else:
-        await message_handler_diary_api(e, m)
+        await message_diary(e, m)
 
 
 @diary_date_error_handler.register_undefined_error_handler
-async def diary_date_undefined(e: APIError, m: Message, _):
+async def diary_date(e: APIError, m: Message, args):
     return await message_error_handler.handle(e, m)
 
 
@@ -124,12 +140,18 @@ vkbottle_error_handler = ErrorHandler()
 
 
 @vkbottle_error_handler.register_error_handler(ClientError)
-async def vkbottle_handler_aiohttp(e: ClientError):
-    logger.error(f"Aiohttp ClientError. Again. Ignoring: {e}")
+async def vkbottle_aiohttp(e: ClientError):
+    logger.warning(f"Aiohttp ClientError. Ignoring\n{e}")
+
+
+@vkbottle_error_handler.register_error_handler(ValidationError)
+async def vkbottle_pydantic(e: ValidationError):  # vkbottle_types
+    logger.error(f"Pydantic error\n{e}")
+    await admin_log(f"Ошибка в типах у {e.model.__name__}")
 
 
 @vkbottle_error_handler.register_undefined_error_handler
-async def vkbottle_handler_undefined(_: BaseException):
+async def vkbottle(_: BaseException):
     logger.exception("Error in vkbottle module")
 
 
@@ -137,7 +159,14 @@ scheduler_error_handler = ErrorHandler(True)
 
 
 @scheduler_error_handler.register_error_handler(APIError)
-async def scheduler_handler_diary_api(e: APIError, child: Child):
+async def scheduler_diary(e: APIError, child: Child):
     logger.warning(f"Server error {e}")
+    await admin_log(f"Ошибка в scheduler(1) у @id{child.vk_id}")
+
+
+@scheduler_error_handler.register_undefined_error_handler
+async def scheduler(e: BaseException, child: Child):
+    logger.exception(f"Undefined error {e}")
+    await admin_log(f"Ошибка в scheduler(2) у @id{child.vk_id}")
 
 # todo add more errors (for handling, of course)
