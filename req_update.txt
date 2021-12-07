@@ -1,5 +1,5 @@
 # vk bot
-vkbottle @ git+https://github.com/vkbottle/vkbottle.git@dev
+vkbottle==4.*
 APScheduler
 
 # database

@@ -222,7 +222,7 @@ class ProgressAverageObject(BaseResponse):
 
     def info(self) -> str:
         if self.kind:
-            return self.kind
+            return f"🚧 {self.kind}"
         return f"📅 {self.sub_period}\n\n{self.self.info()}"
 
 
@@ -273,9 +273,9 @@ class LessonsScoreObject(BaseResponse):
     def info(self):
         if self.data is None or len(self.data) == 0:
             if self.kind:
-                return self.kind
+                return f"🚧 {self.kind}"
             else:
-                return self.sub_period
+                return f"📅 {self.sub_period}"
         return f"📅 {self.sub_period}\n\n" + \
                "\n".join(f"{lesson}:\n{get_score_stat(score)}" for lesson, score in self.data.items())
 
