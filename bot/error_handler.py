@@ -29,7 +29,7 @@ async def message_diary(e: APIError, m: Message):
     elif e.json_not_success:
         logger.warning(f"{e}: Server error")
         await m.answer("🚧 Временные неполадки с сервером. Повторите попытку позже")
-        await admin_log("Неверный запрос к серверу. Проверить")
+        await admin_log("Неверный запрос к серверу. Проверить!")
 
     else:
         await admin_log("В error_handler.py ошибка (1)")  # Это не должно произойти
@@ -39,7 +39,7 @@ async def message_diary(e: APIError, m: Message):
 async def message_vk_9(e: VKAPIError, m: Message):
     logger.info(f"VKApi flood error: {e.description} {e.code}")
     try:
-        await m.answer("🚧 Мне кажется, или ты начал флудить?")
+        await m.answer("🚧 Мне кажется, или начался флуд?")
     except VKAPIError[9]:  # todo?
         ...
 
@@ -88,7 +88,7 @@ async def callback_diary(e: APIError, event: MessageEvent):
 async def callback_vk_9(e: VKAPIError, event: MessageEvent):
     logger.info(f"VKApi flood error: {e.description} {e.code}")
     try:
-        await event.show_snackbar("🚧 Мне кажется, или ты начал флудить?")
+        await event.show_snackbar("🚧 Мне кажется, или начался флуд?")
     except VKAPIError[9]:  # todo?
         ...
 

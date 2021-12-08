@@ -122,7 +122,7 @@ async def marks_job(child: Child):
         DATA[child] = new_marks, new_period
 
 
-# every two hours
+# every 2 hours
 @scheduler.scheduled_job("cron", id="marks_default_job", hour="7-23/2", timezone="asia/krasnoyarsk")
 async def default_scheduler():
     logger.debug("Check default new marks")

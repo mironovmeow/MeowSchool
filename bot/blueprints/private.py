@@ -17,7 +17,7 @@ from .other import AuthState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
-bp = Blueprint(name="PrivateMessage", labeler=labeler)
+bp = Blueprint(name="Private", labeler=labeler)
 
 
 @bp.on.message(state=AuthState.LOGIN)
@@ -51,7 +51,7 @@ async def password_handler(message: Message):
         await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api, user=user)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
-        logger.info(f"Auth new user: @id{message.peer_id}")
+        logger.info(f"Auth new user: id{message.peer_id}")
         await message.answer(
             message="🔓 Вы успешно авторизовались!\n"
                     "Воспользуйтесь кнопками снизу",
@@ -124,7 +124,7 @@ async def start_handler(message: Message):
                     keyboard=keyboard.EMPTY
                 )
 
-        # if user in db
+        # if user in db  todo check logic
         else:
             login, password = user.login, user.password
             try:

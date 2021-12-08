@@ -40,7 +40,7 @@ async def admin_log(text: str):
 
 
 async def auth_users_and_chats():  # todo рассмотреть вариант с auth-middleware
-    logger.debug("Start auth users from db")
+    logger.debug("Start auth from db")
     count_user, count_chat = 0, 0
     for user in await User.get_all(chats=True, children=True):
         try:
@@ -49,7 +49,7 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
             else:
                 api = await DiaryApi.auth_by_login(user.login, user.password)
             await bp.state_dispenser.set(user.vk_id, AuthState.AUTH, api=api, user=user)
-            logger.debug(f"Auth @id{user.vk_id} complete")
+            logger.debug(f"Auth id{user.vk_id} complete")
             count_user += 1
 
             for chat in user.chats:
@@ -59,10 +59,10 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
                     api=api,
                     user_id=user.vk_id
                 )
-                logger.debug(f"Auth {chat.chat_id} complete")
+                logger.debug(f"Auth chat{chat.chat_id - 2_000_000_000} complete")
                 count_chat += 1
         except APIError as e:
-            logger.warning(f"Auth @id{user.vk_id} failed! {e}")
+            logger.warning(f"Auth id{user.vk_id} failed! {e}")
             await e.session.close()
 
     await admin_log("Бот запущен.\n"

@@ -16,14 +16,14 @@ from .other import AuthState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
 
-bp = Blueprint(name="ChatMessage", labeler=labeler)
+bp = Blueprint(name="Chat", labeler=labeler)
 
 
 @bp.on.message(rules.ChatActionRule(MessagesMessageActionStatus.CHAT_INVITE_USER.value))
 @message_error_handler.catch
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
-        if message.state_peer:  # if auth
+        if message.state_peer:  # if auth  todo check logic
             chat = await Chat.get(message.peer_id)
             user_state_peer = await bp.state_dispenser.get(chat.vk_id)
             await bp.state_dispenser.set(
@@ -50,7 +50,7 @@ async def invite_handler(message: Message):
 async def stop_command(message: Message):
     if not message.state_peer:  # if not auth
         await message.answer(
-            "🔒 Эта беседа не авторизована. Если вы хотите убрать меня, то просто удалите из беседы"
+            "🔒 Эта беседа не авторизована. Бота можно просто удалить из беседы"
         )
     else:  # if auth
         user_id: int = message.state_peer.payload["user_id"]
@@ -69,8 +69,8 @@ async def stop_command(message: Message):
             if chat:
                 await chat.delete()
 
-            await admin_log(f"Бот покинул беседу.\n{message.peer_id}")
-            logger.info(f"Leave chat: {message.peer_id}")
+            await admin_log(f"Бот покинул беседу.\nchat{message.chat_id}")
+            logger.info(f"Leave chat: chat{message.chat_id}")
 
 
 @bp.on.message(rules.CommandRule("помощь") | rules.CommandRule("help"))
@@ -82,8 +82,8 @@ async def help_command(message: Message):
         "🔸 /начать -- Авторизовать беседу\n"
         "🔸 /стоп -- Убрать бота из беседы\n\n"
         "🔸 /дневник -- Посмотреть дневник на завтра\n"
-        "🔸 /дневник дд.мм.гггг -- Посмотреть дневник (домашнее задания, оценки)\n\n"
-        "📒 Для всех команд есть английские алиасы (help, start, diary)."
+        "🔸 /дневник дд.мм.гггг -- Посмотреть дневник на конкретное число\n\n"
+        "📒 Для всех команд есть английские алиасы (help, start, stop, diary)."
     )
 
 
@@ -96,8 +96,8 @@ async def start_command(message: Message):
         # check auth of user
         if user_state_peer is None or user_state_peer.state != get_state_repr(AuthState.AUTH):
             await message.answer(
-                "🔑 Для начала, нужно авторизоваться в личных сообщениях бота: vk.me/schoolbot04, "
-                "затем снова написать /начать (/start).",
+                "🔒 Для начала, нужно авторизоваться в личных сообщениях бота: vk.me/schoolbot04, "
+                "затем здесь написать /начать (/start).",
                 reply_to=message.id
             )
 
@@ -115,16 +115,17 @@ async def start_command(message: Message):
                 "🔓 Беседа авторизована успешно! Напишите /помощь (/help) для получения списка всех команд.",
                 reply_to=message.id
             )
-            await admin_log(f"Новая беседа авторизована.\n{message.peer_id}")
-            logger.info(f"Auth new chat: {message.peer_id}")
+            await admin_log(f"Новая беседа авторизована.\nchat{message.chat_id}")
+            logger.info(f"Auth new chat: chat{message.chat_id}")
     else:
         await message.answer(
-            "🚧 Беседа уже авторизована!\n"
-            "Воспользуйтесь командой /помощь (/help) для получения списка команд.",
+            "🔓 Беседа уже авторизована!\n"
+            "Воспользуйтесь командой /помощь (/help) для получения списка всех команд.",
             reply_to=message.id
         )
 
 
+# todo flood control
 @bp.on.message(rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=AuthState.AUTH)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
