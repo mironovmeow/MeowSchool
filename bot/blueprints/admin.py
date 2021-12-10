@@ -78,7 +78,11 @@ async def admin_post_command(message: Message, text: str):
         count_user += 1
 
     for chat in await Chat.get_all():
-        await bp.api.messages.send(chat.chat_id, 0, message=f"🔔 Уведомление!\n\n{text}")
+        await bp.api.messages.send(
+            peer_id=chat.chat_id,
+            random_id=0,
+            message=f"🔔 Уведомление!\n\n{text}"
+        )
         count_chat += 1
     await message.answer("🔸 Выполнено!\n"
                          f"🔸 Пользователи: {count_user}\n"
