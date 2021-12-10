@@ -179,6 +179,9 @@ def settings(user: Optional[User] = None, child: Optional[Child] = None):
         keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)
     else:
         raise TypeError("Need or user, or child")
+
+    keyboard.row()
+    keyboard.add(Callback("⚠️Удалить аккаунт", payload={"keyboard": "settings", "settings": "delete"}), red)
     return keyboard.get_json()
 
 
@@ -198,3 +201,12 @@ def settings_marks(user: User, children: List[ChildObject]):
         keyboard.row()  # workaround. 6 rows max
     keyboard.add(Callback("Вернуться", {"keyboard": "settings"}))
     return keyboard.get_json()
+
+
+DELETE_VERIFY = (
+    Keyboard(inline=True)
+    .add(Callback("⚠️Да, удалить аккаунт", payload={"keyboard": "settings", "settings": "delete_verify"}), red)
+    .row()
+    .add(Callback("⚙Назад", payload={"keyboard": "settings"}), white)
+    .get_json()
+)

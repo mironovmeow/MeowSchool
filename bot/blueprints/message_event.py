@@ -12,7 +12,7 @@ from bot.db import Child, User
 from bot.error_handler import callback_error_handler
 from diary import DiaryApi
 from . import scheduler
-from .other import AuthState
+from .other import AuthState, admin_log
 
 bp = Blueprint(name="MessageEvent")
 
@@ -167,7 +167,53 @@ async def callback_settings_marks_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(AuthState.AUTH),
-    payload_contains={"keyboard": "settings", "settings": "marks"}
+    payload_contains={"keyboard": "settings", "settings": "delete"}
+)
+async def callback_delete_handler(event: MessageEvent):
+    await event.show_snackbar("🚧 Вы уверены?")
+    await event.edit_message(
+        message="🚧 Вы уверены?",
+        keyboard=keyboard.DELETE_VERIFY
+    )
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(AuthState.AUTH),
+    payload_contains={"keyboard": "settings", "settings": "delete_verify"}
+)
+async def callback_delete_verify_handler(event: MessageEvent):
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    user: User = state_peer.payload["user"]
+    for chat in user.chats:
+        await bp.api.messages.send(
+            peer_id=chat.chat_id,
+            random_id=0,
+            message="🚧 Профиль, который активировал беседу, был удалён.\n"
+                    "🔒 Напишите /начать (/start), что бы авторизовать беседу"
+        )
+        await bp.state_dispenser.delete(chat.chat_id)
+    await user.delete()
+
+    api: DiaryApi = state_peer.payload["api"]
+    await api.close()
+
+    await bp.state_dispenser.delete(event.peer_id)
+
+    await event.edit_message("Готово")
+    await event.send_message(
+        "🚧 Аккаунт успешно удалён.\n\n🔸 Если захотите вернуться, напишите что-нибудь снова",
+        keyboard=keyboard.EMPTY
+    )
+    await admin_log(f"Пользователь @id{event.peer_id} удалился")
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(AuthState.AUTH),
+    payload_contains={"keyboard": "settings"}
 )
 async def callback_settings_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
