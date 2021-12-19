@@ -9,10 +9,9 @@ from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
 from bot import keyboard
-from bot.db import Child, User, session
+from bot.db import Child, User
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
-from . import scheduler
 from .other import AuthState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
@@ -87,7 +86,7 @@ async def start_handler(message: Message):
             keyboard=keyboard.MENU
         )
     else:
-        user: Optional[User] = await session.get(User, message.peer_id)
+        user: Optional[User] = await User.get(message.peer_id)
 
         # if user not registered
         if user is None:
@@ -224,16 +223,17 @@ async def settings_command(message: Message):
 
 
 # promo command
-@bp.on.message(rules.CommandRule("врядликтотобудетчитатьисходникиинайдётпасхалку"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("вряд_ли_кто_то_будет_читать_исходники_и_найдёт_пасхалку"), state=AuthState.AUTH)
 @message_error_handler.catch
 async def easter_egg_command(message: Message):
     user: User = message.state_peer.payload["user"]
-    for child in user.children:
-        child.marks = 3
-        await scheduler.add(child)
-    await user.save()
-    await admin_log(f"@id{message.peer_id} активировал пасхалку")
-    await message.answer("Молодец. Теперь у тебя почти самые крутые уведомления.")
+    if user.donut_level < 3:
+        user.donut_level = 3
+        await user.save()
+        await admin_log(f"@id{message.peer_id} активировал пасхалку")
+        await message.answer("🎉 Молодец. Надеюсь ты сам искал пасхалку")
+    else:
+        await message.answer("🚧 Ты слишком крут для этой пасхалки")
 
 
 @bp.on.message(text="/<command>", state=AuthState.AUTH)

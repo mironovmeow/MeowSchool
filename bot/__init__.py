@@ -1,4 +1,3 @@
 """
-Bot module (vkbottle)
+VK bot module (vkbottle)
 """
-from .main import bot

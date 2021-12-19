@@ -26,7 +26,7 @@ async def invite_handler(message: Message):
         if message.state_peer:  # if auth  todo check logic
             chat = await Chat.get(message.peer_id)
             user_state_peer = await bp.state_dispenser.get(chat.vk_id)
-            await bp.state_dispenser.set(
+            await bp.state_dispenser.set(  # todo add chat to state?  L66
                 message.peer_id,
                 AuthState.AUTH,
                 api=user_state_peer.payload["api"],

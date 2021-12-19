@@ -3,7 +3,7 @@ Database module (sqlalchemy with aiosqlite)
 """
 from typing import Iterable, List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, String, func, select
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, selectinload
@@ -23,8 +23,18 @@ class User(Base):
     login = Column(String(length=128))
     password = Column(String(length=128))  # maybe to do something with it?
 
-    chats: List["Chat"] = relationship("Chat", back_populates="user", lazy='selectin', cascade="all, delete-orphan")
-    children: List["Child"] = relationship("Child", back_populates="user", lazy='selectin', cascade="all, delete-orphan")
+    donut_level = Column(Integer, default=0)
+
+    refry_id = Column(ForeignKey("users.vk_id"))
+    refry_user: Optional["User"] = relationship("User", remote_side=[vk_id])
+    # referral_users: async func with session.execute(...).scalars().all()
+
+    chats: List["Chat"] = relationship("Chat", back_populates="user", lazy="selectin", cascade="all, delete-orphan")
+    children: List["Child"] = relationship("Child", back_populates="user", lazy="selectin", cascade="all, delete-orphan")
+
+    async def referral_users(self) -> List["User"]:
+        stmt = select(User).where(User.refry_id == self.vk_id)
+        return (await session.execute(stmt)).scalars().all()
 
     @classmethod
     async def create(
@@ -33,19 +43,20 @@ class User(Base):
             diary_session: Optional[str] = None,
             login: Optional[str] = None,
             password: Optional[str] = None
-    ) -> "User":
+    ) -> "User":  # todo try to optimize
         user = cls(vk_id=vk_id, diary_session=diary_session, login=login, password=password)
         session.add(user)
         try:
             await session.flush()
             await session.commit()
-        except IntegrityError:
+            return await session.get(User, vk_id)
+        except IntegrityError:  # todo?
             user = await session.get(User, vk_id)
             user.diary_session = diary_session
             user.login = login
             user.password = password
             await session.commit()
-        return user
+            return user
 
     @classmethod
     async def get(cls, vk_id: int, chats: bool = False, children: bool = False) -> Optional["User"]:
@@ -54,7 +65,7 @@ class User(Base):
             stmt = stmt.options(selectinload(cls.chats))
         if children:
             stmt = stmt.options(selectinload(cls.children))
-        return (await session.execute(stmt)).scalar_one()
+        return (await session.execute(stmt)).scalar_one_or_none()
 
     @classmethod
     async def get_all(cls, chats: bool = False, children: bool = False) -> Iterable["User"]:
@@ -86,7 +97,7 @@ class Child(Base):
 
     vk_id = Column(Integer, ForeignKey('users.vk_id'), primary_key=True, nullable=False)
     child_id = Column(Integer, primary_key=True, nullable=False)
-    marks = Column(Integer, default=False, nullable=False)
+    marks_notify = Column(Boolean, default=False, nullable=False)
 
     user: "User" = relationship("User", lazy="selectin", back_populates="children")
 
@@ -95,34 +106,16 @@ class Child(Base):
     async def create(
             cls,
             vk_id: int,
-            child_id: int,
-            marks: bool = False
+            child_id: int
     ):
-        child = cls(vk_id=vk_id, child_id=child_id, marks=marks)
+        child = cls(vk_id=vk_id, child_id=child_id)
         session.add(child)
         try:
             await session.flush()
             await session.commit()
-        except IntegrityError:
+        except IntegrityError:  # todo?
             child = await session.get(Child, (vk_id, child_id))
-            child.marks = marks
-            await session.commit()
         return child
-
-    @classmethod
-    async def get(cls, vk_id: int, child_id: int) -> Optional["Child"]:
-        return await session.get(Child, (vk_id, child_id))
-
-    @classmethod
-    async def get_all(cls, user: bool = False) -> Iterable["Child"]:
-        stmt = select(cls)
-        if user:
-            stmt = stmt.options(selectinload(cls.user))
-        return (await session.execute(stmt)).scalars()
-
-    async def delete(self):
-        await session.delete(self)
-        await session.commit()
 
     @staticmethod
     async def save():
@@ -142,7 +135,7 @@ class Chat(Base):
     chat_id = Column(Integer, primary_key=True)
     vk_id = Column(Integer, ForeignKey('users.vk_id'))
 
-    user: "User" = relationship("User", lazy='selectin', back_populates="chats")
+    user: "User" = relationship("User", lazy="selectin", back_populates="chats")
 
     @classmethod
     # warning! no checking user with vk_id!
@@ -166,19 +159,8 @@ class Chat(Base):
     async def get(cls, chat_id: int) -> Optional["Chat"]:
         return await session.get(Chat, chat_id)
 
-    @classmethod
-    async def get_all(cls, user: bool = False) -> Iterable["Chat"]:
-        stmt = select(cls)
-        if user:
-            stmt = stmt.options(selectinload(cls.user))
-        return (await session.execute(stmt)).scalars()
-
     async def delete(self):
         await session.delete(self)
-        await session.commit()
-
-    @staticmethod
-    async def save():
         await session.commit()
 
     @staticmethod

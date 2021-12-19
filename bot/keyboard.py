@@ -173,7 +173,7 @@ def settings(user: Optional[User] = None, child: Optional[Child] = None):
     if child:
         keyboard.add(
             Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks", "child_id": child.child_id}),
-            green if child.marks > 0 else white
+            green if child.marks_notify else white
         )
     elif user:
         keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)

@@ -108,16 +108,14 @@ async def callback_marks_handler(event: MessageEvent):
 
 
 async def change_child_marks(child: Child) -> str:
-    if child.marks == 0:
-        await scheduler.add(child)
-        child.marks = 1
-        text = "🔔 Уведомления об оценках включены"
-    elif child.marks == 1:
+    if child.marks_notify:
         await scheduler.delete(child)
-        child.marks = 0
-        text = "🔕 Уведомления об оценках выключены"
+        child.marks_notify = False
+        text = "🔔 Уведомления об оценках выключены"
     else:
-        text = "🚧 Пока нельзя выключить донатные уведомления"
+        await scheduler.add(child)
+        child.marks_notify = True
+        text = "🔔 Уведомления об оценках включены"
     await child.save()
     return text
 

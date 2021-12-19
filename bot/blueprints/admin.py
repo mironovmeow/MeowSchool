@@ -6,7 +6,6 @@ from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 from bot.db import Chat, Child, User
 from bot.error_handler import message_error_handler
 from diary import DiaryApi
-from . import scheduler
 from .other import ADMINS
 
 IsAdmin = rules.FromPeerRule(ADMINS)
@@ -17,13 +16,13 @@ labeler = BotLabeler(auto_rules=[IsAdmin, rules.PeerRule(False)])
 bp = Blueprint(name="Admin", labeler=labeler)
 
 
-@bp.on.message(text="/ping")
+@bp.on.message(text="!ping")
 @message_error_handler.catch
 async def admin_ping_command(message: Message):
     await message.answer("pong")
 
 
-@bp.on.message(text="/delete <vk_id:int>")
+@bp.on.message(text="!delete <vk_id:int>")
 @message_error_handler.catch
 async def admin_delete_command(message: Message, vk_id: int):
     state_peer = await bp.state_dispenser.get(vk_id)
@@ -42,54 +41,30 @@ async def admin_delete_command(message: Message, vk_id: int):
         await message.answer("🔸 Пользователь не найден")
 
 
-Marks = ["выключен", "обычный", "донат", "вип", "админ"]
+Donut = ["обычный", "реферал", "донат", "вип", "админ"]
 
 
-@bp.on.message(text="/marks <vk_id:int> <marks:int>")
+@bp.on.message(text="!donut <vk_id:int> <donut:int>")
 @message_error_handler.catch
-async def admin_marks_command(message: Message, vk_id: int, marks: int):
+async def admin_donut_command(message: Message, vk_id: int, donut: int):
     state_peer = await bp.state_dispenser.get(vk_id)
-    if marks < 0 or marks > 4:
+    if donut < 0 or donut > 4:
         await message.answer("🔸 Неверный уровень уведомлений оценки")
     elif not state_peer:
         await message.answer("🔸 Пользователь не найден")
     else:
         user: User = state_peer.payload["user"]
-        for child in user.children:
-            child.marks = marks
-            if marks == 0:
-                await scheduler.delete(child)
-            else:
-                await scheduler.add(child)
+        user.donut_level = donut
         await user.save()
 
         await bp.api.messages.send(
             vk_id, 0,
-            message=f"🔸 Ваш уровень по уведомлениям был изменён администратором на \"{Marks[marks]}\"."
+            message=f"🔸 Ваш уровень был изменён администратором на \"{Donut[donut]}\"."
         )
         await message.answer("Выполнено!")
 
 
-@bp.on.message(text="/post\n<text>")
-async def admin_post_command(message: Message, text: str):
-    count_user, count_chat = 0, 0
-    for user in await User.get_all():  # todo add notify column in db.
-        await bp.api.messages.send(user.vk_id, 0, message=f"🔔 Уведомление!\n\n{text}")
-        count_user += 1
-
-    for chat in await Chat.get_all():
-        await bp.api.messages.send(
-            peer_id=chat.chat_id,
-            random_id=0,
-            message=f"🔔 Уведомление!\n\n{text}"
-        )
-        count_chat += 1
-    await message.answer("🔸 Выполнено!\n"
-                         f"🔸 Пользователи: {count_user}\n"
-                         f"🔸 Беседы: {count_chat}")
-
-
-@bp.on.message(text="/info")
+@bp.on.message(text="!info")
 @message_error_handler.catch
 async def admin_marks_command(message: Message):
     await message.answer(

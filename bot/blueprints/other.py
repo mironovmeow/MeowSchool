@@ -39,6 +39,10 @@ async def admin_log(text: str):
         )
 
 
+async def ref_activate(refry_id: int, referral_id: int):
+    ...
+
+
 async def auth_users_and_chats():  # todo рассмотреть вариант с auth-middleware
     logger.debug("Start auth from db")
     count_user, count_chat = 0, 0

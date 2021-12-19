@@ -9,7 +9,7 @@ from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
 from bot.blueprints.other import admin_log
-from bot.db import Child, select, session
+from bot.db import Child, User, select, session
 from bot.error_handler import scheduler_error_handler
 from diary import DiaryApi
 
@@ -56,10 +56,12 @@ class Marks:
         return False
 
 
-default_stmt = select(Child).where(Child.marks == 1)
-donut_stmt = select(Child).where(Child.marks == 2)
-vip_stmt = select(Child).where(Child.marks == 3)
-admin_stmt = select(Child).where(Child.marks == 4)
+stmt = select(Child).join(User).where(Child.marks_notify.is_(True))
+default_stmt = stmt.filter(User.donut_level == 0)
+ref_stmt = stmt.filter(User.donut_level == 1)
+donut_stmt = stmt.filter(User.donut_level == 2)
+vip_stmt = stmt.filter(User.donut_level == 3)
+admin_stmt = stmt.filter(User.donut_level == 4)
 
 scheduler = AsyncIOScheduler()
 bp = Blueprint(name="Scheduler")  # use for message_send
@@ -130,8 +132,16 @@ async def default_scheduler():
         await marks_job(child)
 
 
-# every 15 minutes
-@scheduler.scheduled_job("cron", id="marks_donut_job", minute="*/15", hour="7-23", timezone="asia/krasnoyarsk")
+# every 20 minutes
+@scheduler.scheduled_job("cron", id="marks_ref_job", minute="*/20", hour="7-23", timezone="asia/krasnoyarsk")
+async def ref_scheduler():
+    logger.debug("Check ref new marks")
+    for child in (await session.execute(ref_stmt)).scalars():
+        await marks_job(child)
+
+
+# every 10 minutes
+@scheduler.scheduled_job("cron", id="marks_donut_job", minute="*/10", hour="7-23", timezone="asia/krasnoyarsk")
 async def donut_scheduler():
     logger.debug("Check donut new marks")
     for child in (await session.execute(donut_stmt)).scalars():
@@ -155,16 +165,16 @@ async def admin_scheduler():
 
 
 async def start():
-    child_count = 0
+    children_count = 0
 
     child: Child
-    for child in (await session.execute(select(Child).where(Child.marks > 0))).scalars():
-        child_count += 1
+    for child in (await session.execute(select(Child).where(Child.marks_notify.is_(True)))).scalars():
+        children_count += 1
         DATA[child] = await Marks.from_api(child)
 
     await admin_log(
         "Уведомления запущены.\n"
-        f"🔸 Уведомления: {child_count}"
+        f"🔸 Уведомления: {children_count}"
     )
     scheduler.start()
 
