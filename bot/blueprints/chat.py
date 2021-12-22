@@ -12,7 +12,7 @@ from bot import keyboard
 from bot.db import Chat
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
-from .other import AuthState, admin_log, tomorrow
+from .other import MeowState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
 
@@ -28,7 +28,7 @@ async def invite_handler(message: Message):
             user_state_peer = await bp.state_dispenser.get(chat.vk_id)
             await bp.state_dispenser.set(  # todo add chat to state?  L66
                 message.peer_id,
-                AuthState.AUTH,
+                MeowState.AUTH,
                 api=user_state_peer.payload["api"],
                 user_id=message.from_id
             )
@@ -94,7 +94,7 @@ async def start_command(message: Message):
         user_state_peer = await bp.state_dispenser.get(message.from_id)
 
         # check auth of user
-        if user_state_peer is None or user_state_peer.state != get_state_repr(AuthState.AUTH):
+        if user_state_peer is None or user_state_peer.state != get_state_repr(MeowState.AUTH):
             await message.answer(
                 "🔒 Для начала, нужно авторизоваться в личных сообщениях бота: vk.me/schoolbot04, "
                 "затем здесь написать /начать (/start).",
@@ -104,7 +104,7 @@ async def start_command(message: Message):
         else:
             await bp.state_dispenser.set(
                 message.peer_id,
-                AuthState.AUTH,
+                MeowState.AUTH,
                 api=user_state_peer.payload["api"],
                 user_id=message.from_id
             )
@@ -126,7 +126,7 @@ async def start_command(message: Message):
 
 
 # todo flood control
-@bp.on.message(rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -139,7 +139,7 @@ async def diary_command(message: Message, args: Tuple[str]):
     )
 
 
-@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def diary_tomorrow_command(message: Message):
     return await diary_command(message, (tomorrow(),))  # type: ignore

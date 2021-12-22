@@ -12,25 +12,25 @@ from bot import keyboard
 from bot.db import Child, User
 from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
-from .other import AuthState, admin_log, tomorrow
+from .other import MeowState, admin_log, ref_activate, tomorrow, get_peer_id
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
 bp = Blueprint(name="Private", labeler=labeler)
 
 
-@bp.on.message(state=AuthState.LOGIN)
+@bp.on.message(state=MeowState.LOGIN)
 @message_error_handler.catch
 async def login_handler(message: Message):
     if not message.text:  # empty
         return await start_handler(message)
-    await bp.state_dispenser.set(message.peer_id, AuthState.PASSWORD, login=message.text)
+    await bp.state_dispenser.set(message.peer_id, MeowState.PASSWORD, login=message.text)
     await message.answer(
         message="🔑 А теперь введите пароль."
     )
 
 
-@bp.on.message(state=AuthState.PASSWORD)
+@bp.on.message(state=MeowState.PASSWORD)
 @message_error_handler.catch
 async def password_handler(message: Message):
     if not message.text:  # empty
@@ -47,7 +47,7 @@ async def password_handler(message: Message):
         for child_id in range(len(api.user.children)):
             await Child.create(message.peer_id, child_id)
         user = await User.get(vk_id=message.peer_id, chats=True, children=True)
-        await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api, user=user)
+        await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api, user=user)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: id{message.peer_id}")
@@ -58,7 +58,7 @@ async def password_handler(message: Message):
         )
     except APIError as e:
         if e.json_not_success:
-            await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+            await bp.state_dispenser.set(message.peer_id, MeowState.LOGIN)
             error_message = e.json.get("message")
             if error_message:
                 await message.answer(
@@ -75,12 +75,60 @@ async def password_handler(message: Message):
             raise e
 
 
+@bp.on.message(state=MeowState.REF_CODE)
+@message_error_handler.catch
+async def ref_code_handler(message: Message):
+    user: User = message.state_peer.payload["user"]
+
+    if not message.text:  # empty
+        await message.answer(
+            "🚧 Не вижу текст. Попробуй ещё раз.",
+            keyboard=keyboard.REF_CODE_BACK
+        )
+    else:
+        refry_id = get_peer_id(message.text)
+        if not refry_id:
+            await message.answer(
+                "🚧 Не вижу id пользователя. Попробуй ещё раз.",
+                keyboard=keyboard.REF_CODE_BACK
+            )
+        elif refry_id == user.vk_id:
+            await message.answer(
+                "🚧 Нельзя стать рефералом самого себя. Попробуй ещё раз.",
+                keyboard=keyboard.REF_CODE_BACK
+            )
+        else:
+            refry = await bp.state_dispenser.get(refry_id)
+            if refry is None:
+                await message.answer(
+                    "🚧 Не вижу такого пользователя в системе. Попробуй ещё раз.",
+                    keyboard=keyboard.REF_CODE_BACK
+                )
+            else:
+                refry_user: User = refry.payload["user"]
+                user.refry_user = refry_user
+                await user.save()
+
+                await bp.state_dispenser.set(
+                    message.peer_id,
+                    MeowState.AUTH,
+                    api=message.state_peer.payload["api"],
+                    user=user
+                )
+
+                await ref_activate(refry_user, message.peer_id)
+                await message.answer(
+                    "✅ Успешно подключено!",
+                    keyboard=keyboard.settings(user)
+                )
+
+
 @bp.on.message(rules.PayloadRule({"command": "start"}))  # startup button
 @bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
 @message_error_handler.catch
 async def start_handler(message: Message):
     # if user is registered
-    if message.state_peer is not None and message.state_peer.state == get_state_repr(AuthState.AUTH):
+    if message.state_peer is not None and message.state_peer.state == get_state_repr(MeowState.AUTH):
         await message.answer(
             message="🚧 Вы уже авторизованы. Открываю меню",
             keyboard=keyboard.MENU
@@ -113,7 +161,7 @@ async def start_handler(message: Message):
                     dont_parse_links=True
                 )
             else:
-                await bp.state_dispenser.set(message.peer_id, AuthState.LOGIN)
+                await bp.state_dispenser.set(message.peer_id, MeowState.LOGIN)
                 await message.answer(
                     "👋 Добро пожаловать!\n"
                     "Здесь можно узнать домашнее задание и оценки из sosh.mon-ra.ru "
@@ -131,7 +179,7 @@ async def start_handler(message: Message):
             login, password = user.login, user.password
             try:
                 api = await DiaryApi.auth_by_login(login, password)
-                await bp.state_dispenser.set(message.peer_id, AuthState.AUTH, api=api)
+                await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api)
                 await message.answer(
                     message="🚧 Были небольшие проблемы со сервером. Повторите операцию ещё раз."
                 )
@@ -162,7 +210,7 @@ async def help_command(message: Message):
     )
 
 
-@bp.on.message(rules.CommandRule("меню") | rules.CommandRule("menu"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("меню") | rules.CommandRule("menu"), state=MeowState.AUTH)
 @message_error_handler.catch
 async def menu_command(message: Message):
     await message.answer(
@@ -173,7 +221,7 @@ async def menu_command(message: Message):
 
 @bp.on.message(
     rules.CommandRule("дневник", args_count=1) | rules.CommandRule("diary", args_count=1),
-    state=AuthState.AUTH
+    state=MeowState.AUTH
 )
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
@@ -187,13 +235,13 @@ async def diary_command(message: Message, args: Tuple[str]):
     )
 
 
-@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("дневник") | rules.CommandRule("diary"), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def diary_empty_command(message: Message):
     return await diary_command(message, (tomorrow(),))  # type: ignore
 
 
-@bp.on.message(rules.CommandRule(("оценки", 1)) | rules.CommandRule(("marks", 1)), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule(("оценки", 1)) | rules.CommandRule(("marks", 1)), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def marks_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -206,13 +254,13 @@ async def marks_command(message: Message, args: Tuple[str]):
     )
 
 
-@bp.on.message(rules.CommandRule("оценки") | rules.CommandRule("marks"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("оценки") | rules.CommandRule("marks"), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def marks_empty_command(message: Message):
     return await marks_command(message, (tomorrow(),))  # type: ignore
 
 
-@bp.on.message(rules.CommandRule("настройки") | rules.CommandRule("settings"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("настройки") | rules.CommandRule("settings"), state=MeowState.AUTH)
 @message_error_handler.catch
 async def settings_command(message: Message):
     user: User = message.state_peer.payload["user"]
@@ -223,7 +271,7 @@ async def settings_command(message: Message):
 
 
 # promo command
-@bp.on.message(rules.CommandRule("вряд_ли_кто_то_будет_читать_исходники_и_найдёт_пасхалку"), state=AuthState.AUTH)
+@bp.on.message(rules.CommandRule("вряд_ли_кто_то_будет_читать_исходники_и_найдёт_пасхалку"), state=MeowState.AUTH)
 @message_error_handler.catch
 async def easter_egg_command(message: Message):
     user: User = message.state_peer.payload["user"]
@@ -236,7 +284,7 @@ async def easter_egg_command(message: Message):
         await message.answer("🚧 Ты слишком крут для этой пасхалки")
 
 
-@bp.on.message(text="/<command>", state=AuthState.AUTH)
+@bp.on.message(text="/<command>", state=MeowState.AUTH)
 async def undefined_command(message: Message, command: str):
     await message.answer(
         message=f"🚧 Команда \"/{command}\" не найдена. Возможно, был использован неправильный формат.\n"
@@ -244,7 +292,7 @@ async def undefined_command(message: Message, command: str):
     )
 
 
-@bp.on.message(state=AuthState.AUTH, payload_map={"menu": str})
+@bp.on.message(state=MeowState.AUTH, payload_map={"menu": str})
 @message_error_handler.catch
 async def menu_handler(message: Message):
     menu = message.get_payload_json().get("menu")

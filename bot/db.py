@@ -36,6 +36,10 @@ class User(Base):
         stmt = select(User).where(User.refry_id == self.vk_id)
         return (await session.execute(stmt)).scalars().all()
 
+    async def referral_count(self) -> int:
+        stmt = select(func.count(User.vk_id)).where(User.refry_id == self.vk_id)
+        return (await session.execute(stmt)).scalar_one()
+
     @classmethod
     async def create(
             cls,

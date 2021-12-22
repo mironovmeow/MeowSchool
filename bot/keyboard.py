@@ -165,20 +165,20 @@ MENU = (
 EMPTY = Keyboard().get_json()
 
 
-def settings(user: Optional[User] = None, child: Optional[Child] = None):
+def settings(user: User):
     keyboard = Keyboard(inline=True)
     if user and len(user.children) == 1:
         child = user.children[0]
-
-    if child:
         keyboard.add(
             Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks", "child_id": child.child_id}),
             green if child.marks_notify else white
         )
-    elif user:
-        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)
     else:
-        raise TypeError("Need or user, or child")
+        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)
+
+    if user.refry_user is None:
+        keyboard.row()
+        keyboard.add(Callback("🎁Активировать реф.код", payload={"keyboard": "settings", "settings": "ref_code"}), blue)
 
     keyboard.row()
     keyboard.add(Callback("⚠️Удалить аккаунт", payload={"keyboard": "settings", "settings": "delete"}), red)
@@ -201,6 +201,13 @@ def settings_marks(user: User, children: List[ChildObject]):
         keyboard.row()  # workaround. 6 rows max
     keyboard.add(Callback("Вернуться", {"keyboard": "settings"}))
     return keyboard.get_json()
+
+
+REF_CODE_BACK = (
+    Keyboard(inline=True)
+    .add(Callback("⚙Назад", payload={"ref_code": "settings"}), white)
+    .get_json()
+)
 
 
 DELETE_VERIFY = (

@@ -22,7 +22,8 @@ typing-extensions==3.10.0.2
 tzdata==2021.5
 tzlocal==4.1
 vbml==1.1
-vkbottle==4.1.4.post1
+# workaround
+vkbottle @ git+https://github.com/vkbottle/vkbottle.git@9885f0445980234b8f899e21db2fbf19e1b6a6c2
 vkbottle-types==5.131.131.5
 watchgod==0.7
 win32-setctime==1.0.4
