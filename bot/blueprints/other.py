@@ -41,10 +41,6 @@ async def admin_log(text: str):
         )
 
 
-async def ref_activate(refry_id: int, referral_id: int):
-    ...
-
-
 async def ref_activate(refry_user: User, referral_id: int):
     referral_count = await refry_user.referral_count()
     await bp.api.messages.send(

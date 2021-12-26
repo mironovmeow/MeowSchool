@@ -79,8 +79,13 @@ async def marks_job(child: Child):
     new_marks, new_period = await Marks.from_api(child)
 
     if old_period != new_period:  # new period
-        await bp.api.messages.send(child.vk_id, message=f"🔔 Изменение периода: {new_period}", random_id=0)
-        old_marks = {}
+        await bp.api.messages.send(
+            child.vk_id,
+            message=f"🔔 Изменение периода в оценках: {new_period}.\n",
+            random_id=0
+        )
+        old_marks = new_marks
+        DATA[child] = ({}, new_period)
 
     changed_marks: Dict[str, Dict[str, List[str]]] = {}  # date: {lesson: [information]}
 
