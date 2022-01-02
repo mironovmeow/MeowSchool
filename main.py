@@ -1,4 +1,4 @@
-from bot.main import bot
+from vk_bot.main import bot
 
 
 if __name__ == '__main__':

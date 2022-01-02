@@ -1,6 +1,7 @@
 """
 Error handlers (catch all errors in handlers, vkbottle)
 """
+from asyncio import TimeoutError
 from typing import Tuple
 
 from aiohttp import ClientError
@@ -55,6 +56,12 @@ async def message_pydantic(e: ValidationError, m: Message):  # diary.types
     logger.error(f"Pydantic error\n{e}")
     await m.answer("🚧 Ошибка сервера. Уже известно, чиним")
     await admin_log(f"Ошибка в типах у {e.model.__name__}")
+
+
+@message_error_handler.register_error_handler(TimeoutError)
+async def message_aiohttp_timeout(e: TimeoutError, m: Message):
+    logger.info(f"Timeout error {e}")
+    await m.answer("🚧 Сервер дневника не работает. Повторите попытку позже")
 
 
 @message_error_handler.register_undefined_error_handler
@@ -112,6 +119,12 @@ async def callback_pydantic(e: ValidationError, event: MessageEvent):  # diary.t
     await admin_log(f"Ошибка в типах у {e.model.__name__}")
 
 
+@callback_error_handler.register_error_handler(TimeoutError)
+async def callback_aiohttp_timeout(e: TimeoutError, event: MessageEvent):
+    logger.info(f"Timeout error {e}")
+    await event.show_snackbar("🚧 Сервер дневника не работает. Повторите попытку позже")
+
+
 @callback_error_handler.register_undefined_error_handler
 async def callback(e: BaseException, event: MessageEvent):
     logger.exception(f"Undefined error {e}")
@@ -164,9 +177,14 @@ async def scheduler_diary(e: APIError, child: Child):
     await admin_log(f"Ошибка в scheduler(1) у @id{child.vk_id}")
 
 
+@scheduler_error_handler.register_error_handler(TimeoutError)
+async def scheduler_aiohttp_timeout(e: TimeoutError, child: Child):
+    logger.info(f"Timeout error {e}")
+
+
 @scheduler_error_handler.register_undefined_error_handler
 async def scheduler(e: BaseException, child: Child):
     logger.exception(f"Undefined error {e}")
-    await admin_log(f"Ошибка в scheduler(2) у @id{child.vk_id}")
+    await admin_log(f"Ошибка в scheduler(undefined) у @id{child.vk_id}")
 
 # todo add more errors (for handling, of course)

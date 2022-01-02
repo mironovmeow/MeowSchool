@@ -1,5 +1,6 @@
 import sys
 
+from loguru import logger
 from vkbottle import LoopWrapper
 from vkbottle.bot import Bot
 
@@ -11,6 +12,14 @@ from .error_handler import vkbottle_error_handler
 if len(sys.argv) < 2:
     raise ValueError("Token is undefined")
 TOKEN = sys.argv[1]
+
+# logger.remove()
+
+logger.add("full.log", encoding="utf8")  # ...
+logger.add("vk_api.log", encoding="utf8", filter="vkbottle.api.api")
+logger.add("diary_api.log", encoding="utf8", filter="diary.api")
+logger.disable("vkbottle.framework.bot.bot")
+logger.disable("vkbottle.polling.bot_polling")
 
 
 async def _close_session():

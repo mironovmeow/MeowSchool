@@ -8,11 +8,11 @@ from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesTemplateActionTypeNames
 
-from bot import keyboard
-from bot.db import Child, User
-from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import APIError, DiaryApi
-from .other import MeowState, admin_log, ref_activate, tomorrow, get_peer_id
+from vk_bot import keyboard
+from vk_bot.db import Child, User
+from vk_bot.error_handler import diary_date_error_handler, message_error_handler
+from .other import MeowState, admin_log, get_peer_id, ref_activate, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
@@ -86,7 +86,7 @@ async def ref_code_handler(message: Message):
             keyboard=keyboard.REF_CODE_BACK
         )
     else:
-        refry_id = get_peer_id(message.text)
+        refry_id = await get_peer_id(message.text)
         if not refry_id:
             await message.answer(
                 "🚧 Не вижу id пользователя. Попробуй ещё раз.",
@@ -121,6 +121,15 @@ async def ref_code_handler(message: Message):
                     "✅ Успешно подключено!",
                     keyboard=keyboard.settings(user)
                 )
+
+
+@bp.on.message(state=MeowState.NOT_AUTH)
+@message_error_handler.catch
+async def not_auth_handler(message: Message):
+    await message.answer(
+        message="🚧 Тех. работы. Ожидайте"
+    )
+    await admin_log(f"@id{message.peer_id} не авторизован")
 
 
 @bp.on.message(rules.PayloadRule({"command": "start"}))  # startup button

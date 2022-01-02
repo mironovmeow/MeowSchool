@@ -3,9 +3,9 @@ Admin features and commands
 """
 from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 
-from bot.db import Chat, Child, User
-from bot.error_handler import message_error_handler
 from diary import DiaryApi
+from vk_bot.db import Chat, Child, User
+from vk_bot.error_handler import message_error_handler
 from .other import ADMINS
 
 IsAdmin = rules.FromPeerRule(ADMINS)

@@ -2,14 +2,16 @@
 Additional functions with blueprint integration (bp.state_dispenser and bp.api)
 """
 import datetime
+import re
+from asyncio import TimeoutError
 from typing import Optional
 
 from vkbottle import BaseStateGroup
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
-from bot.db import User
 from diary import APIError, DiaryApi
+from vk_bot.db import User
 
 ADMINS = [
     248525108,  # @mironovmeow      | Миронов Данил
@@ -17,6 +19,7 @@ ADMINS = [
 
 
 class MeowState(BaseStateGroup):
+    NOT_AUTH = -3  # todo
     LOGIN = -2
     PASSWORD = -1
     AUTH = 1
@@ -59,10 +62,16 @@ async def ref_activate(refry_user: User, referral_id: int):
         )
 
 
-def get_peer_id(text: str) -> Optional[int]:
-    if text.isdigit():
-        return int(text)
-    return None
+async def get_peer_id(text: str) -> Optional[int]:
+    screen_name = re.match(
+        r"^(?:vk\.(?:com|me)/)?\b([a-zA-Z0-9_.]+)$",
+        text
+    )
+    if screen_name is None:
+        return None
+    if screen_name.group(1).isdecimal():
+        return int(screen_name.group(1))
+    return (await bp.api.utils.resolve_screen_name(screen_name.group(1))).object_id
 
 
 async def auth_users_and_chats():  # todo рассмотреть вариант с auth-middleware
@@ -87,9 +96,17 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
                 )
                 logger.debug(f"Auth chat{chat.chat_id - 2_000_000_000} complete")
                 count_chat += 1
-        except APIError as e:
-            logger.warning(f"Auth id{user.vk_id} failed! {e}")
-            await e.session.close()
+        except (APIError, TimeoutError):
+            await bp.state_dispenser.set(user.vk_id, MeowState.NOT_AUTH, user=user)
+            logger.debug(f"Auth id{user.vk_id} not complete")
+
+            for chat in user.chats:
+                await bp.state_dispenser.set(
+                    chat.chat_id,
+                    MeowState.NOT_AUTH,
+                    user_id=user.vk_id
+                )
+                logger.debug(f"Auth chat{chat.chat_id - 2_000_000_000} not complete")
 
     await admin_log("Бот запущен.\n"
                     f"🔸 Пользователи: {count_user}\n"

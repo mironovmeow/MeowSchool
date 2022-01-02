@@ -7,10 +7,10 @@ from vkbottle import ABCRule, BaseStateGroup, GroupEventType
 from vkbottle.bot import Blueprint, MessageEvent
 from vkbottle.dispatch.dispenser import get_state_repr
 
-from bot import keyboard
-from bot.db import Child, User
-from bot.error_handler import callback_error_handler
 from diary import DiaryApi
+from vk_bot import keyboard
+from vk_bot.db import Child, User
+from vk_bot.error_handler import callback_error_handler
 from . import scheduler
 from .other import MeowState, admin_log
 
@@ -28,6 +28,17 @@ class StateRule(ABCRule[MessageEvent]):
         if state_peer is None:
             return not self.state
         return state_peer.state in self.state
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(MeowState.NOT_AUTH),
+)
+@callback_error_handler.catch
+async def not_auth_handler(event: MessageEvent):
+    await event.show_snackbar("🚧 Тех. работы. Ожидайте")
+    await admin_log(f"@id{event.peer_id} не авторизован")
 
 
 @bp.on.raw_event(

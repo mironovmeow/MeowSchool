@@ -8,10 +8,10 @@ from vkbottle.dispatch.dispenser import get_state_repr
 from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
-from bot import keyboard
-from bot.db import Chat
-from bot.error_handler import diary_date_error_handler, message_error_handler
 from diary import DiaryApi
+from vk_bot import keyboard
+from vk_bot.db import Chat
+from vk_bot.error_handler import diary_date_error_handler, message_error_handler
 from .other import MeowState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
@@ -43,6 +43,13 @@ async def invite_handler(message: Message):
                 "🔒 Напишите /начать (/start), что бы авторизовать беседу"
             )
         logger.info(f"Get new chat: {message.peer_id}")
+
+
+@bp.on.message(state=MeowState.NOT_AUTH)
+@message_error_handler.catch
+async def not_auth_handler(message: Message):
+    await message.answer(message="🚧 Тех. работы. Ожидайте")
+    await admin_log(f"chat{message.chat_id} не авторизован")
 
 
 @bp.on.message(rules.CommandRule("стоп") | rules.CommandRule("stop"))

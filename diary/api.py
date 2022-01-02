@@ -3,7 +3,7 @@ Api module (on aiohttp)
 """
 from typing import Optional, Type
 
-from aiohttp import ClientResponse, ClientSession, ContentTypeError, TCPConnector
+from aiohttp import ClientResponse, ClientSession, ClientTimeout, ContentTypeError, TCPConnector
 from loguru import logger
 
 from . import types
@@ -70,7 +70,8 @@ class DiaryApi:
                 "Connection": "keep-alive"
             },
             connector=TCPConnector(ssl=False),  # it's bad, i know
-            cookies={"sessionid": diary_session}
+            cookies={"sessionid": diary_session},
+            timeout=ClientTimeout(10)
         )
         async with session.get(
                 'https://sosh.mon-ra.ru/rest/login'
@@ -84,7 +85,8 @@ class DiaryApi:
         logger.debug("Request \"login\" with data {\"login\": ..., \"password\": ...}")
         session = ClientSession(
             headers={"User-Agent": "MeowApi/2 (vk.com/schoolbot04)"},
-            connector=TCPConnector(ssl=False)  # it's bad, i know
+            connector=TCPConnector(ssl=False),  # it's bad, i know
+            timeout=ClientTimeout(10)
         )
         async with session.get(
                 f'https://sosh.mon-ra.ru/rest/login?'

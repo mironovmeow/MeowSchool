@@ -8,10 +8,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
-from bot.blueprints.other import admin_log
-from bot.db import Child, User, select, session
-from bot.error_handler import scheduler_error_handler
 from diary import DiaryApi
+from vk_bot.blueprints.other import admin_log
+from vk_bot.db import Child, User, select, session
+from vk_bot.error_handler import scheduler_error_handler
 
 
 class Marks:

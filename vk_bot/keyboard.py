@@ -1,11 +1,11 @@
 """Keyboards module"""
 import datetime
-from typing import List, Optional
+from typing import List
 
 from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
 from diary.types import ChildObject, DiaryLessonObject
-from .db import Child, User
+from .db import User
 
 white = KeyboardButtonColor.SECONDARY
 green = KeyboardButtonColor.POSITIVE
