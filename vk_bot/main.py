@@ -15,9 +15,10 @@ TOKEN = sys.argv[1]
 
 # logger.remove()
 
-logger.add("full.log", encoding="utf8")  # ...
-logger.add("vk_api.log", encoding="utf8", filter="vkbottle.api.api")
-logger.add("diary_api.log", encoding="utf8", filter="diary.api")
+logger.add("full.log", encoding="utf8", rotation="24h")  # ...
+# logger.add("vk_api.log", encoding="utf8", filter="vkbottle.api.api")
+# logger.add("diary_api.log", encoding="utf8", filter="diary.api")
+logger.add("error.log", encoding="utf8", level=40, rotation="10 MB")
 logger.disable("vkbottle.framework.bot.bot")
 logger.disable("vkbottle.polling.bot_polling")
 

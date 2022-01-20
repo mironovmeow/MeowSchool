@@ -182,6 +182,11 @@ async def scheduler_aiohttp_timeout(e: TimeoutError, child: Child):
     logger.info(f"Timeout error {e}")
 
 
+@scheduler_error_handler.register_error_handler(ClientError)
+async def scheduler_aiohttp(e: ClientError, child: Child):
+    logger.info(f"ClientError {e}")
+
+
 @scheduler_error_handler.register_undefined_error_handler
 async def scheduler(e: BaseException, child: Child):
     logger.exception(f"Undefined error {e}")
