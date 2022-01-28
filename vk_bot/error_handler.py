@@ -173,6 +173,10 @@ scheduler_error_handler = ErrorHandler(True)
 
 @scheduler_error_handler.register_error_handler(APIError)
 async def scheduler_diary(e: APIError, child: Child):
+    # todo 401 error
+    if not e.resp.ok:  # if server is not working
+        return  # ignore
+
     logger.warning(f"Server error {e}")
     await admin_log(f"Ошибка в scheduler(1) у @id{child.vk_id}")
 
