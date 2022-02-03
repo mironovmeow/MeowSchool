@@ -2,7 +2,7 @@
 Error handlers (catch all errors in handlers, vkbottle)
 """
 from asyncio import TimeoutError
-from typing import Tuple
+from typing import Tuple, Union
 
 from aiohttp import ClientError
 from loguru import logger
@@ -49,6 +49,7 @@ async def message_vk_9(e: VKAPIError, m: Message):
 async def message_vk(e: VKAPIError, m: Message):
     logger.warning(f"VKApi error: {e.description} {e.code}")
     await m.answer("🚧 Неизвестная ошибка с VK 0_o")
+    await admin_log(f"Ошибка в vk. {e.code}, {m.peer_id}")
 
 
 @message_error_handler.register_error_handler(ValidationError)
@@ -58,9 +59,9 @@ async def message_pydantic(e: ValidationError, m: Message):  # diary.types
     await admin_log(f"Ошибка в типах у {e.model.__name__}")
 
 
-@message_error_handler.register_error_handler(TimeoutError)
-async def message_aiohttp_timeout(e: TimeoutError, m: Message):
-    logger.info(f"Timeout error {e}")
+@message_error_handler.register_error_handler(TimeoutError, ClientError)
+async def message_aiohttp(e: Union[TimeoutError, ClientError], m: Message):
+    logger.info(f"Server error {e}")
     await m.answer("🚧 Сервер дневника не работает. Повторите попытку позже")
 
 
@@ -68,6 +69,7 @@ async def message_aiohttp_timeout(e: TimeoutError, m: Message):
 async def message(e: BaseException, m: Message):
     logger.exception(f"Undefined error {e}")
     await m.answer("🚧 Неизвестная ошибка 0_o")
+    await admin_log(f"Ошибка в message у @id{m.peer_id}")
 
 
 callback_error_handler = ErrorHandler(redirect_arguments=True)
@@ -110,6 +112,7 @@ async def callback_vk_909(e: VKAPIError, event: MessageEvent):
 async def callback_vk(e: VKAPIError, event: MessageEvent):
     logger.warning(f"VKApi error {e.description} {e.code}")
     await event.show_snackbar("🚧 Неизвестная ошибка с VK 0_o")
+    await admin_log(f"Ошибка в vk. {e.code}, {event.peer_id}")
 
 
 @callback_error_handler.register_error_handler(ValidationError)
@@ -119,9 +122,9 @@ async def callback_pydantic(e: ValidationError, event: MessageEvent):  # diary.t
     await admin_log(f"Ошибка в типах у {e.model.__name__}")
 
 
-@callback_error_handler.register_error_handler(TimeoutError)
-async def callback_aiohttp_timeout(e: TimeoutError, event: MessageEvent):
-    logger.info(f"Timeout error {e}")
+@callback_error_handler.register_error_handler(TimeoutError, ClientError)
+async def callback_aiohttp(e: Union[TimeoutError, ClientError], event: MessageEvent):
+    logger.info(f"Server error {e}")
     await event.show_snackbar("🚧 Сервер дневника не работает. Повторите попытку позже")
 
 
@@ -129,6 +132,7 @@ async def callback_aiohttp_timeout(e: TimeoutError, event: MessageEvent):
 async def callback(e: BaseException, event: MessageEvent):
     logger.exception(f"Undefined error {e}")
     await event.show_snackbar("🚧 Неизвестная ошибка 0_o")
+    await admin_log(f"Ошибка в callback у @id{event.peer_id}")
 
 
 diary_date_error_handler = ErrorHandler(redirect_arguments=True)
@@ -154,7 +158,8 @@ vkbottle_error_handler = ErrorHandler()
 
 @vkbottle_error_handler.register_error_handler(ClientError)
 async def vkbottle_aiohttp(e: ClientError):
-    logger.warning(f"Aiohttp ClientError. Ignoring\n{e}")
+    logger.info(f"Ignoring {e}")
+    await admin_log(f"Ошибка в aiohttp vkbottle\n{e}")
 
 
 @vkbottle_error_handler.register_error_handler(ValidationError)
@@ -166,6 +171,7 @@ async def vkbottle_pydantic(e: ValidationError):  # vkbottle_types
 @vkbottle_error_handler.register_undefined_error_handler
 async def vkbottle(_: BaseException):
     logger.exception("Error in vkbottle module")
+    await admin_log(f"Ошибка в vkbottle")
 
 
 scheduler_error_handler = ErrorHandler(True)
@@ -181,14 +187,9 @@ async def scheduler_diary(e: APIError, child: Child):
     await admin_log(f"Ошибка в scheduler(1) у @id{child.vk_id}")
 
 
-@scheduler_error_handler.register_error_handler(TimeoutError)
-async def scheduler_aiohttp_timeout(e: TimeoutError, child: Child):
-    logger.info(f"Timeout error {e}")
-
-
-@scheduler_error_handler.register_error_handler(ClientError)
-async def scheduler_aiohttp(e: ClientError, child: Child):
-    logger.info(f"ClientError {e}")
+@scheduler_error_handler.register_error_handler(TimeoutError, ClientError)
+async def scheduler_aiohttp_timeout(e: Union[TimeoutError, ClientError], child: Child):
+    logger.info(f"Server error {e}")
 
 
 @scheduler_error_handler.register_undefined_error_handler
