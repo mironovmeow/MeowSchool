@@ -45,28 +45,28 @@ async def not_auth_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(MeowState.AUTH),
-    payload_map={"date": str, "child": int, "lesson": int},
+    payload_map={"date": str, "lesson": int},
     payload_contains={"keyboard": "diary"}
 )
 @callback_error_handler.catch
-async def callback_diary_day_handler(event: MessageEvent):
+async def diary_day_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     api: DiaryApi = state_peer.payload["api"]
-    payload = event.get_payload_json()
+    payload = event.payload
     date: str = payload["date"]
-    child: int = payload["child"]
+    child: int = state_peer.payload["child_id"]
     lesson_index: int = payload["lesson"]
     diary = await api.diary(date, child=child)
     if diary.days[0].lessons is not None and len(diary.days[0].lessons) > 0:
         lesson = diary.days[0].lessons[lesson_index]
         await event.edit_message(
             message=lesson.info(event.peer_id != event.user_id, True),
-            keyboard=keyboard.diary_day(date, diary.days[0].lessons, lesson_index, child)
+            keyboard=keyboard.diary_day(date, diary.days[0].lessons, lesson_index)
         )
     else:
         await event.edit_message(
             message=diary.days[0].kind,
-            keyboard=keyboard.diary_day(date, [], lesson_index, child)
+            keyboard=keyboard.diary_day(date, [], lesson_index)
         )
 
 
@@ -74,20 +74,20 @@ async def callback_diary_day_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(MeowState.AUTH),
-    payload_map={"date": str, "child": int},
+    payload_map={"date": str},
     payload_contains={"keyboard": "diary"}
 )
 @callback_error_handler.catch
-async def callback_diary_week_handler(event: MessageEvent):
+async def diary_week_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     api: DiaryApi = state_peer.payload["api"]
-    payload = event.get_payload_json()
+    payload = event.payload
     date: str = payload["date"]
-    child: int = payload["child"]
+    child: int = state_peer.payload["child_id"]
     diary = await api.diary(date, child=child)
     await event.edit_message(
         message=diary.info(event.peer_id != event.user_id),
-        keyboard=keyboard.diary_week(date, api.user.children, child)
+        keyboard=keyboard.diary_week(date)
     )
 
 
@@ -95,17 +95,17 @@ async def callback_diary_week_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(MeowState.AUTH),
-    payload_map={"date": str, "count": bool, "child": int},
+    payload_map={"date": str, "count": bool},
     payload_contains={"keyboard": "marks"}
 )
 @callback_error_handler.catch
-async def callback_marks_handler(event: MessageEvent):
+async def marks_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     api: DiaryApi = state_peer.payload["api"]
-    payload = event.get_payload_json()
+    payload = event.payload
     date: str = payload["date"]
     count: bool = payload["count"]
-    child: int = payload["child"]
+    child: int = state_peer.payload["child_id"]
     if count:
         marks = await api.lessons_scores(date, child=child)
         text = marks.info()
@@ -114,7 +114,7 @@ async def callback_marks_handler(event: MessageEvent):
         text = marks.info()
     await event.edit_message(
         message=text,
-        keyboard=keyboard.marks_stats(date, api.user.children, count, child)
+        keyboard=keyboard.marks_stats(date, count)
     )
 
 
@@ -137,12 +137,13 @@ async def change_child_marks(child: Child) -> str:
     StateRule(MeowState.AUTH),
     payload_contains={"keyboard": "settings", "settings": "marks_child_select"}
 )
-async def callback_settings_marks_child_handler(event: MessageEvent):
+@callback_error_handler.catch
+async def settings_marks_child_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     api: DiaryApi = state_peer.payload["api"]
     user: User = state_peer.payload["user"]
 
-    child_id = event.get_payload_json().get("child_id")
+    child_id = event.payload.get("child_id")
     if type(child_id) == int:
         await event.show_snackbar(await change_child_marks(user.children[child_id]))
     await event.edit_message(
@@ -158,8 +159,9 @@ async def callback_settings_marks_child_handler(event: MessageEvent):
     payload_map={"child_id": int},
     payload_contains={"keyboard": "settings", "settings": "marks"}
 )
-async def callback_settings_marks_handler(event: MessageEvent):
-    child_id = event.get_payload_json()["child_id"]
+@callback_error_handler.catch
+async def settings_marks_handler(event: MessageEvent):
+    child_id = event.payload["child_id"]
 
     state_peer = await bp.state_dispenser.get(event.peer_id)
     user: User = state_peer.payload["user"]
@@ -175,9 +177,49 @@ async def callback_settings_marks_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(MeowState.AUTH),
+    payload_map={"child_id": int},
+    payload_contains={"keyboard": "settings", "settings": "child_select"}
+)
+@callback_error_handler.catch
+async def settings_child_select_handler(event: MessageEvent):
+    child_id = event.payload["child_id"]
+
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    api: DiaryApi = state_peer.payload["api"]
+
+    state_peer.payload["child_id"] = child_id
+
+    await event.edit_message(
+        message="⚙ Выбор ученика",
+        keyboard=keyboard.settings_child_select(api.user.children, child_id)
+    )
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(MeowState.AUTH),
+    payload_contains={"keyboard": "settings", "settings": "child_select"}
+)
+@callback_error_handler.catch
+async def settings_child_handler(event: MessageEvent):
+    state_peer = await bp.state_dispenser.get(event.peer_id)
+    api: DiaryApi = state_peer.payload["api"]
+
+    await event.edit_message(
+        message="⚙ Выбор ученика",
+        keyboard=keyboard.settings_child_select(api.user.children, state_peer.payload["child_id"])
+    )
+
+
+@bp.on.raw_event(
+    GroupEventType.MESSAGE_EVENT,
+    MessageEvent,
+    StateRule(MeowState.AUTH),
     payload_contains={"keyboard": "settings", "settings": "delete"}
 )
-async def callback_user_delete_handler(event: MessageEvent):
+@callback_error_handler.catch
+async def user_delete_handler(event: MessageEvent):
     await event.show_snackbar("🚧 Вы уверены?")
     await event.edit_message(
         message="🚧 Вы уверены?",
@@ -191,7 +233,8 @@ async def callback_user_delete_handler(event: MessageEvent):
     StateRule(MeowState.AUTH),
     payload_contains={"keyboard": "settings", "settings": "delete_verify"}
 )
-async def callback_delete_verify_handler(event: MessageEvent):
+@callback_error_handler.catch
+async def delete_verify_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     user: User = state_peer.payload["user"]
     for chat in user.chats:
@@ -223,7 +266,8 @@ async def callback_delete_verify_handler(event: MessageEvent):
     StateRule(MeowState.AUTH),
     payload_contains={"keyboard": "settings"}
 )
-async def callback_settings_handler(event: MessageEvent):
+@callback_error_handler.catch
+async def settings_handler(event: MessageEvent):
     state_peer = await bp.state_dispenser.get(event.peer_id)
     user: User = state_peer.payload["user"]
 

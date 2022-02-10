@@ -23,13 +23,20 @@ class APIError(BaseException):
         self.session = session
         self.json = json
 
+    @property
+    def code(self):
+        if self.json:
+            return self.json.get("error_code", self.resp.status)
+        else:
+            return self.resp.status
+
     def __str__(self):
         return f"APIError [{self.resp.status}] {self.json}"
 
     @property
-    def json_not_success(self) -> bool:
+    def json_success(self) -> bool:
         if self.json:
-            return not self.json.get("success", True)
+            return self.json.get("success", False)
         return False
 
 
@@ -118,7 +125,7 @@ class DiaryLessonObject(BaseModel):  # TODO
         else:
             return "📙 Нет домашнего задания"
 
-    def info(self, is_chat: bool, full: bool = False) -> str:  # todo change logic of homework description
+    def info(self, is_chat: bool, full: bool = False) -> str:
         if full:
             return f"📚 {self.discipline} {_mark(self.marks) if is_chat else ''}\n" \
                    f"⌚ {self.lesson[1]} ({self.lesson[2]} -- {self.lesson[3]})\n" \
@@ -198,12 +205,10 @@ class ProgressDataObject(BaseModel):
     total: Optional[float]
     data: Optional[Dict[str, float]]  # discipline: mark
 
-    @classmethod  # fix pycharm warning
     @validator("total")
     def check_total(cls, value):
         return _check_value_of_mark(value)
 
-    @classmethod  # fix pycharm warning
     @validator("data", each_item=True)
     def check_data(cls, value):
         return _check_value_of_mark(value)
@@ -234,13 +239,13 @@ class AdditionalMaterialsObject(BaseResponse):
 
 # /rest/school_meetings
 
-class SchoolMeetingsObject(BaseResponse):  # please, contact with me if in your school work this function
+class SchoolMeetingsObject(BaseResponse):
     kind: Optional[str]
 
 
 # /rest/totals
 
-class TotalsObject(BaseResponse):  # todo how to do it
+class TotalsObject(BaseResponse):  # todo how to do it better
     period: str
     period_types: List[str]  # ['1 Полугодие', '2 Полугодие', 'Годовая']
     subjects: Dict[str, List[str]]  # 'Русский язык': ['4', '0', '0']
@@ -250,7 +255,7 @@ class TotalsObject(BaseResponse):  # todo how to do it
 
 # /lessons_scores
 
-class ScoreObject(BaseModel):  # remake
+class ScoreObject(BaseModel):
     date: str  # 2012-21-12
     marks: Dict[str, List[str]]  # text: [marks (str)]
 
@@ -282,7 +287,7 @@ class LessonsScoreObject(BaseResponse):
 
 # /check_food
 
-class CheckFoodObject(BaseModel):  # please, contact with me if in your school work this function
+class CheckFoodObject(BaseModel):
     food_plugin: str  # "NO" and maybe "YES"
 
 

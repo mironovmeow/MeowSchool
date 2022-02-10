@@ -30,7 +30,8 @@ async def invite_handler(message: Message):
                 message.peer_id,
                 MeowState.AUTH,
                 api=user_state_peer.payload["api"],
-                user_id=message.from_id
+                user_id=message.from_id,
+                child_id=0
             )
 
             await message.answer(
@@ -113,7 +114,8 @@ async def start_command(message: Message):
                 message.peer_id,
                 MeowState.AUTH,
                 api=user_state_peer.payload["api"],
-                user_id=message.from_id
+                user_id=message.from_id,
+                child_id=0
             )
 
             await Chat.create(message.peer_id, message.from_id)
@@ -138,10 +140,11 @@ async def start_command(message: Message):
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
     api: DiaryApi = message.state_peer.payload["api"]
-    diary = await api.diary(date)
+    child_id: int = message.state_peer.payload["child_id"]
+    diary = await api.diary(date, child=child_id)
     await message.answer(
         message=diary.info(is_chat=True),
-        keyboard=keyboard.diary_week(date, api.user.children),
+        keyboard=keyboard.diary_week(date),
         dont_parse_links=True
     )
 

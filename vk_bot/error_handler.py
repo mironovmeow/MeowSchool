@@ -11,7 +11,7 @@ from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message, MessageEvent
 
 from diary.types import APIError
-from .blueprints.other import admin_log
+from .blueprints.other import admin_log, re_auth
 from .db import Child
 
 message_error_handler = ErrorHandler(redirect_arguments=True)
@@ -19,21 +19,17 @@ message_error_handler = ErrorHandler(redirect_arguments=True)
 
 @message_error_handler.register_error_handler(APIError)
 async def message_diary(e: APIError, m: Message):
-    if not e.resp.ok:
-        if e.resp.status == 401:
-            logger.info(f"Re-auth {m.peer_id}")
-            await m.answer("🚧 Проблемы с авторизацией. Необходимо переподключиться")  # todo
-        else:
-            logger.warning(f"{e}: Server error")
-            await m.answer("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
+    if e.code == 401:
+        await re_auth(e, message=m)
 
-    elif e.json_not_success:
+    elif e.code >= 400:
         logger.warning(f"{e}: Server error")
-        await m.answer("🚧 Временные неполадки с сервером. Повторите попытку позже")
-        await admin_log("Неверный запрос к серверу. Проверить!")
+        await m.answer("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
 
     else:
-        await admin_log("В error_handler.py ошибка (1)")  # Это не должно произойти
+        logger.warning(f"{e}: Server error")
+        await m.answer("🚧 Временные неполадки. Повторите попытку позже")
+        await admin_log("Неверный запрос к серверу. Проверить!")
 
 
 @message_error_handler.register_error_handler(VKAPIError[9])
@@ -43,6 +39,8 @@ async def message_vk_9(e: VKAPIError, m: Message):
         await m.answer("🚧 Мне кажется, или начался флуд?")
     except VKAPIError[9]:  # todo?
         ...
+    except BaseException as another_e:
+        await message_error_handler.handle(another_e, m)
 
 
 @message_error_handler.register_error_handler(VKAPIError)
@@ -77,20 +75,17 @@ callback_error_handler = ErrorHandler(redirect_arguments=True)
 
 @callback_error_handler.register_error_handler(APIError)
 async def callback_diary(e: APIError, event: MessageEvent):
-    if not e.resp.ok:
-        if e.resp.status == 401:
-            logger.info(f"Re-auth {event.peer_id}")
-            await event.show_snackbar("🚧 Проблемы с авторизацией. Необходимо переподключиться")  # todo
-        else:
-            logger.warning(f"Server error {e}")
-            await event.show_snackbar("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
+    if e.code == 401:
+        await re_auth(e, event=event)
 
-    elif e.json_not_success:
-        logger.warning(f"Server error {e}")
-        await event.show_snackbar("🚧 Временные неполадки с сервером. Повторите попытку позже")
+    elif e.code >= 400:
+        logger.warning(f"{e}: Server error")
+        await event.show_snackbar("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
 
     else:
-        await admin_log("В error_handler.py ошибка (2)")  # Это не должно произойти
+        logger.warning(f"{e}: Server error")
+        await event.show_snackbar("🚧 Временные неполадки. Повторите попытку позже")
+        await admin_log("Неверный запрос к серверу. Проверить!")
 
 
 @callback_error_handler.register_error_handler(VKAPIError[9])
@@ -100,6 +95,8 @@ async def callback_vk_9(e: VKAPIError, event: MessageEvent):
         await event.show_snackbar("🚧 Мне кажется, или начался флуд?")
     except VKAPIError[9]:  # todo?
         ...
+    except BaseException as another_e:
+        await callback_error_handler.handle(another_e, event)
 
 
 @callback_error_handler.register_error_handler(VKAPIError[909])
@@ -138,10 +135,9 @@ async def callback(e: BaseException, event: MessageEvent):
 diary_date_error_handler = ErrorHandler(redirect_arguments=True)
 
 
-# todo add data checking on server side
 @diary_date_error_handler.register_error_handler(APIError)
 async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
-    if e.json_not_success:
+    if not e.json_success:
         logger.info(f"{e}: Wrong date {args[0]}")
         await m.answer("🚧 Указана неверная дата. Попробуйте ещё раз")
     else:
@@ -149,7 +145,7 @@ async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
 
 
 @diary_date_error_handler.register_undefined_error_handler
-async def diary_date(e: APIError, m: Message, args):
+async def diary_date(e: BaseException, m: Message, args):
     return await message_error_handler.handle(e, m)
 
 
@@ -196,5 +192,3 @@ async def scheduler_aiohttp_timeout(e: Union[TimeoutError, ClientError], child: 
 async def scheduler(e: BaseException, child: Child):
     logger.exception(f"Undefined error {e}")
     await admin_log(f"Ошибка в scheduler(undefined) у @id{child.vk_id}")
-
-# todo add more errors (for handling, of course)

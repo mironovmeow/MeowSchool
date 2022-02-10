@@ -48,17 +48,17 @@ async def password_handler(message: Message):
         for child_id in range(len(api.user.children)):
             await Child.create(message.peer_id, child_id)
         user = await User.get(vk_id=message.peer_id, chats=True, children=True)
-        await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api, user=user)
+        await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api, user=user, child_id=0)
 
         await admin_log(f"Авторизован новый пользователь: @id{message.peer_id}")
         logger.info(f"Auth new user: id{message.peer_id}")
         await message.answer(
             message="🔓 Вы успешно авторизовались!\n"
-                    "Воспользуйтесь кнопками снизу",
+                    "Воспользуйтесь кнопками снизу или напишите /помощь (/help) для команд",
             keyboard=keyboard.MENU
         )
     except APIError as e:
-        if e.json_not_success:
+        if not e.json_success:
             await bp.state_dispenser.set(message.peer_id, MeowState.LOGIN)
             error_message = e.json.get("message")
             if error_message:
@@ -85,8 +85,7 @@ async def not_auth_handler(message: Message):
     await admin_log(f"@id{message.peer_id} не авторизован")
 
 
-@bp.on.message(rules.PayloadRule({"command": "start"}))  # startup button
-@bp.on.message(rules.CommandRule("начать") | rules.CommandRule("start"))
+@bp.on.message(rules.PayloadRule({"command": "start"}) | rules.CommandRule("начать") | rules.CommandRule("start"))
 @message_error_handler.catch
 async def start_handler(message: Message):
     # if user is registered
@@ -104,22 +103,22 @@ async def start_handler(message: Message):
             if MessagesTemplateActionTypeNames.CALLBACK not in message.client_info.button_actions:
                 await message.answer(
                     "🚧 Вы используете приложение, в котором недоступны callback-кнопки.\n"
-                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.\n\n"
+                    "Если вы уверены, что это ошибка, сообщите, поможем: vk.me/meow_py",
                     dont_parse_links=True
-                )
-                await admin_log(
-                    f"У [id{message.peer_id}|чувака] не поддерживаются callback. Срочно допросить!"
                 )
             elif message.client_info.keyboard is False:
                 await message.answer(
                     "🚧 Вы используете приложение, в котором недоступны клавиатуры ботов.\n"
-                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.\n\n"
+                    "Если вы уверены, что это ошибка, сообщите, поможем: vk.me/meow_py",
                     dont_parse_links=True
                 )
             elif message.client_info.inline_keyboard is False:
                 await message.answer(
                     "🚧 Вы используете приложение, в котором недоступны клавиатуры ботов внутри сообщений.\n"
-                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.",
+                    "Пользуйтесь официальными приложениями ВКонтакте на Android и iOS, a так же сайтом vk.com.\n\n"
+                    "Если вы уверены, что это ошибка, сообщите, поможем: vk.me/meow_py",
                     dont_parse_links=True
                 )
             else:
@@ -141,7 +140,15 @@ async def start_handler(message: Message):
             login, password = user.login, user.password
             try:
                 api = await DiaryApi.auth_by_login(login, password)
-                await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api)
+                await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, user=user, api=api, child_id=0)
+                for chat in user.chats:
+                    await bp.state_dispenser.set(
+                        chat.peer_id,
+                        MeowState.AUTH,
+                        api=api,
+                        user_id=user.vk_id
+                    )
+                    logger.debug(f"Auth chat{chat.peer_id - 2_000_000_000} complete")
                 await message.answer(
                     message="🚧 Были небольшие проблемы со сервером. Повторите операцию ещё раз."
                 )
@@ -187,12 +194,13 @@ async def menu_command(message: Message):
 )
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
-    date = args[0]
+    date = args[0]  # todo check
     api: DiaryApi = message.state_peer.payload["api"]
-    diary = await api.diary(date)
+    child_id: int = message.state_peer.payload["child_id"]
+    diary = await api.diary(date, child=child_id)
     await message.answer(
         message=diary.info(),
-        keyboard=keyboard.diary_week(date, api.user.children),
+        keyboard=keyboard.diary_week(date),
         dont_parse_links=True
     )
 
@@ -206,12 +214,13 @@ async def diary_empty_command(message: Message):
 @bp.on.message(rules.CommandRule(("оценки", 1)) | rules.CommandRule(("marks", 1)), state=MeowState.AUTH)
 @diary_date_error_handler.catch
 async def marks_command(message: Message, args: Tuple[str]):
-    date = args[0]
+    date = args[0]  # todo check
     api: DiaryApi = message.state_peer.payload["api"]
-    marks = await api.progress_average(date)
+    child_id: int = message.state_peer.payload["child_id"]
+    marks = await api.progress_average(date, child=child_id)
     await message.answer(
         message=marks.info(),
-        keyboard=keyboard.marks_stats(date, api.user.children),
+        keyboard=keyboard.marks_stats(date),
         dont_parse_links=True
     )
 
@@ -236,14 +245,10 @@ async def settings_command(message: Message):
 @bp.on.message(rules.CommandRule("вряд_ли_кто_то_будет_читать_исходники_и_найдёт_пасхалку"), state=MeowState.AUTH)
 @message_error_handler.catch
 async def easter_egg_command(message: Message):
-    user: User = message.state_peer.payload["user"]
-    if user.donut_level < 3:
-        user.donut_level = 3
-        await user.save()
-        await admin_log(f"@id{message.peer_id} активировал пасхалку")
-        await message.answer("🎉 Молодец. Надеюсь ты сам искал пасхалку")
-    else:
-        await message.answer("🚧 Ты слишком крут для этой пасхалки")
+    await message.answer(
+        "🎉 Молодец!\n"
+        "Раньше выдавался специальный бонусный донат. Теперь я не могу его дать :с"
+    )
 
 
 @bp.on.message(text="/<command>", state=MeowState.AUTH)
@@ -276,6 +281,6 @@ async def menu_handler(message: Message):
         )
 
 
-@bp.on.message()  # empty handlers
+@bp.on.message()  # empty handler
 async def empty_handler(message: Message):
     return await start_handler(message)

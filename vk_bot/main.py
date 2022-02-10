@@ -21,6 +21,7 @@ logger.add("full.log", encoding="utf8", rotation="24h")  # ...
 logger.add("error.log", encoding="utf8", level=40, rotation="10 MB")
 logger.disable("vkbottle.framework.bot.bot")
 logger.disable("vkbottle.polling.bot_polling")
+logger.disable("vk_bot.blueprints.scheduler")
 
 
 async def _close_session():

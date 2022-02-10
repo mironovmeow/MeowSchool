@@ -41,29 +41,6 @@ async def admin_delete_command(message: Message, vk_id: int):
         await message.answer("🔸 Пользователь не найден")
 
 
-Donut = ["обычный", "реферал", "донат", "вип", "админ"]
-
-
-@bp.on.message(text="!donut <vk_id:int> <donut:int>")
-@message_error_handler.catch
-async def admin_donut_command(message: Message, vk_id: int, donut: int):
-    state_peer = await bp.state_dispenser.get(vk_id)
-    if donut < 0 or donut > 4:
-        await message.answer("🔸 Неверный уровень уведомлений оценки")
-    elif not state_peer:
-        await message.answer("🔸 Пользователь не найден")
-    else:
-        user: User = state_peer.payload["user"]
-        user.donut_level = donut
-        await user.save()
-
-        await bp.api.messages.send(
-            vk_id, 0,
-            message=f"🔸 Ваш уровень был изменён администратором на \"{Donut[donut]}\"."
-        )
-        await message.answer("Выполнено!")
-
-
 @bp.on.message(text="!info")
 @message_error_handler.catch
 async def admin_marks_command(message: Message):

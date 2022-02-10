@@ -4,9 +4,14 @@ Api module (on aiohttp)
 from typing import Optional, Type
 
 from aiohttp import ClientResponse, ClientSession, ClientTimeout, ContentTypeError, TCPConnector
-from loguru import logger
 
 from . import types
+
+try:
+    from loguru import logger
+except ImportError:
+    from logging import Logger
+    logger = Logger("diary")
 
 
 async def _check_response(r: ClientResponse, session: ClientSession) -> dict:
@@ -18,13 +23,11 @@ async def _check_response(r: ClientResponse, session: ClientSession) -> dict:
         json = await r.json()
         logger.debug(f"Response with {json}")
 
-        error, success = json.get("error"), json.get("success", False)
-
-        if error is not None:  # {"error": "Произошла непредвиденная ошибка ..."}
+        if json.get("error") is not None:  # {"error": "Произошла непредвиденная ошибка ..."}
             json["success"] = False
             json["kind"] = json["error"]
 
-        if success is False:
+        if json.get("success", False) is False:
             logger.info(f"Request failed. Not success.")
             raise types.APIError(r, session, json=json)
 
