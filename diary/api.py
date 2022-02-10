@@ -36,10 +36,11 @@ async def _check_response(r: ClientResponse, session: ClientSession) -> dict:
 
 
 class DiaryApi:
-    def __init__(self, session: ClientSession, user: types.LoginObject, diary_session: str):
+    def __init__(self, session: ClientSession, diary_session: str, diary_information: dict):
         self._session = session
-        self.user = user
+        self.diary_information = diary_information
         self.diary_session = diary_session
+        self.user = types.LoginObject.reformat(diary_information)
 
     def __str__(self) -> str:
         return f'<DiaryApi {self.user.fio}>'
@@ -62,29 +63,23 @@ class DiaryApi:
             return cls.reformat(json)
 
     @classmethod
-    async def auth_by_diary_session(cls, diary_session: str) -> "DiaryApi":
-        logger.debug("Request \"login\" with data {\"sessionid\": ...}")
+    async def auth_by_diary_session(cls, diary_session: str, diary_information: dict) -> "DiaryApi":
         session = ClientSession(
             headers={
-                "User-Agent": "MeowApi/2 (vk.com/schoolbot04)",
+                "User-Agent": "MeowApi/3 (vk.com/schoolbot04)",
                 "Connection": "keep-alive"
             },
             connector=TCPConnector(ssl=False),  # it's bad, i know
             cookies={"sessionid": diary_session},
             timeout=ClientTimeout(10)
         )
-        async with session.get(
-                'https://sosh.mon-ra.ru/rest/login'
-        ) as r:
-            json = await _check_response(r, session)
-            user = types.LoginObject.reformat(json)
-            return cls(session, user, diary_session)
+        return cls(session, diary_session, diary_information)
 
     @classmethod
     async def auth_by_login(cls, login: str, password: str) -> "DiaryApi":
         logger.debug("Request \"login\" with data {\"login\": ..., \"password\": ...}")
         session = ClientSession(
-            headers={"User-Agent": "MeowApi/2 (vk.com/schoolbot04)"},
+            headers={"User-Agent": "MeowApi/3 (vk.com/schoolbot04)"},
             connector=TCPConnector(ssl=False),  # it's bad, i know
             timeout=ClientTimeout(10)
         )
@@ -95,9 +90,8 @@ class DiaryApi:
         ) as r:
             json = await _check_response(r, session)
             diary_cookie = r.cookies.get("sessionid")
-            user = types.LoginObject.reformat(json)
 
-            return cls(session, user, diary_cookie.value)
+            return cls(session, diary_cookie.value, json)
 
     async def diary(self, from_date: str, to_date: Optional[str] = None, *, child: int = 0) -> types.DiaryObject:
         if to_date is None:

@@ -143,7 +143,7 @@ async def callback_settings_marks_child_handler(event: MessageEvent):
     user: User = state_peer.payload["user"]
 
     child_id = event.get_payload_json().get("child_id")
-    if child_id and type(child_id) == int:
+    if type(child_id) == int:
         await event.show_snackbar(await change_child_marks(user.children[child_id]))
     await event.edit_message(
         message="⚙ Настройки уведомлений об оценках",
@@ -175,55 +175,6 @@ async def callback_settings_marks_handler(event: MessageEvent):
     GroupEventType.MESSAGE_EVENT,
     MessageEvent,
     StateRule(MeowState.AUTH),
-    payload_contains={"keyboard": "settings", "settings": "ref_code"}
-)
-async def callback_settings_ref_code_handler(event: MessageEvent):
-    state_peer = await bp.state_dispenser.get(event.peer_id)
-    user: User = state_peer.payload["user"]
-    if user.refry_user is not None:
-        await event.show_snackbar("🚧 Нет, ты уже это делал.")
-    else:
-        api: DiaryApi = state_peer.payload["api"]
-        await bp.state_dispenser.set(
-            event.peer_id,
-            MeowState.REF_CODE,
-            api=api,
-            user=user
-        )
-
-        await event.edit_message(
-            message="Введите id пользователя",
-            keyboard=keyboard.REF_CODE_BACK
-        )
-
-
-@bp.on.raw_event(
-    GroupEventType.MESSAGE_EVENT,
-    MessageEvent,
-    StateRule(MeowState.REF_CODE) | StateRule(MeowState.AUTH),
-    payload_contains={"ref_code": "settings"}
-)
-async def callback_ref_code_back_handler(event: MessageEvent):
-    state_peer = await bp.state_dispenser.get(event.peer_id)
-    user: User = state_peer.payload["user"]
-    api: DiaryApi = state_peer.payload["api"]
-    await bp.state_dispenser.set(
-        event.peer_id,
-        MeowState.AUTH,
-        api=api,
-        user=user
-    )
-
-    await event.edit_message(
-        message="⚙ Настройки",
-        keyboard=keyboard.settings(user)
-    )
-
-
-@bp.on.raw_event(
-    GroupEventType.MESSAGE_EVENT,
-    MessageEvent,
-    StateRule(MeowState.AUTH),
     payload_contains={"keyboard": "settings", "settings": "delete"}
 )
 async def callback_user_delete_handler(event: MessageEvent):
@@ -245,12 +196,12 @@ async def callback_delete_verify_handler(event: MessageEvent):
     user: User = state_peer.payload["user"]
     for chat in user.chats:
         await bp.api.messages.send(
-            peer_id=chat.chat_id,
+            peer_id=chat.peer_id,
             random_id=0,
             message="🚧 Профиль, который активировал беседу, был удалён.\n"
                     "🔒 Напишите /начать (/start), что бы авторизовать беседу"
         )
-        await bp.state_dispenser.delete(chat.chat_id)
+        await bp.state_dispenser.delete(chat.peer_id)
     await user.delete()
 
     api: DiaryApi = state_peer.payload["api"]
@@ -258,9 +209,9 @@ async def callback_delete_verify_handler(event: MessageEvent):
 
     await bp.state_dispenser.delete(event.peer_id)
 
-    await event.edit_message("Готово")
+    await event.edit_message("🚧 Выполнено")
     await event.send_message(
-        "🚧 Аккаунт успешно удалён.\n\n🔸 Если захотите вернуться, напишите что-нибудь снова",
+        "🔸 Если захотите вернуться, напишите что-нибудь снова",
         keyboard=keyboard.EMPTY
     )
     await admin_log(f"Пользователь @id{event.peer_id} удалился")

@@ -19,36 +19,20 @@ class User(Base):
     __tablename__ = 'users'
 
     vk_id = Column(Integer, primary_key=True, nullable=False)
-    diary_session = Column(String(length=32))
-    login = Column(String(length=128))
-    password = Column(String(length=128))  # maybe to do something with it?
-
-    donut_level = Column(Integer, default=0)
-
-    refry_id = Column(ForeignKey("users.vk_id"))
-    refry_user: Optional["User"] = relationship("User", remote_side=[vk_id])
-    # referral_users: async func with session.execute(...).scalars().all()
+    diary_session = Column(String, nullable=False)
+    diary_information = Column(String, nullable=False)
 
     chats: List["Chat"] = relationship("Chat", back_populates="user", lazy="selectin", cascade="all, delete-orphan")
     children: List["Child"] = relationship("Child", back_populates="user", lazy="selectin", cascade="all, delete-orphan")
-
-    async def referral_users(self) -> List["User"]:
-        stmt = select(User).where(User.refry_id == self.vk_id)
-        return (await session.execute(stmt)).scalars().all()
-
-    async def referral_count(self) -> int:
-        stmt = select(func.count(User.vk_id)).where(User.refry_id == self.vk_id)
-        return (await session.execute(stmt)).scalar_one()
 
     @classmethod
     async def create(
             cls,
             vk_id: int,
-            diary_session: Optional[str] = None,
-            login: Optional[str] = None,
-            password: Optional[str] = None
+            diary_session: str,
+            diary_information: str
     ) -> "User":  # todo try to optimize
-        user = cls(vk_id=vk_id, diary_session=diary_session, login=login, password=password)
+        user = cls(vk_id=vk_id, diary_session=diary_session, diary_information=diary_information)
         session.add(user)
         try:
             await session.flush()
@@ -57,8 +41,7 @@ class User(Base):
         except IntegrityError:  # todo?
             user = await session.get(User, vk_id)
             user.diary_session = diary_session
-            user.login = login
-            user.password = password
+            user.diary_information = diary_information
             await session.commit()
             return user
 
@@ -136,7 +119,7 @@ class Child(Base):
 class Chat(Base):
     __tablename__ = "chats"
 
-    chat_id = Column(Integer, primary_key=True)
+    peer_id = Column(Integer, primary_key=True)
     vk_id = Column(Integer, ForeignKey('users.vk_id'))
 
     user: "User" = relationship("User", lazy="selectin", back_populates="chats")
@@ -145,23 +128,23 @@ class Chat(Base):
     # warning! no checking user with vk_id!
     async def create(
             cls,
-            chat_id: int,
+            peer_id: int,
             vk_id: int,
     ) -> "Chat":
-        chat = cls(chat_id=chat_id, vk_id=vk_id)
+        chat = cls(peer_id=peer_id, vk_id=vk_id)
         session.add(chat)
         try:
             await session.flush()
             await session.commit()
         except IntegrityError:
-            chat = await session.get(Chat, chat_id)
+            chat = await session.get(Chat, peer_id)
             chat.vk_id = vk_id
             await session.commit()
         return chat
 
     @classmethod
-    async def get(cls, chat_id: int) -> Optional["Chat"]:
-        return await session.get(Chat, chat_id)
+    async def get(cls, peer_id: int) -> Optional["Chat"]:
+        return await session.get(Chat, peer_id)
 
     async def delete(self):
         await session.delete(self)
@@ -172,7 +155,7 @@ class Chat(Base):
         return (await session.execute(select(func.count(Chat.vk_id)))).scalar_one()
 
     def __repr__(self):
-        return f"<Chat(chat_id={self.chat_id}, ...)>"
+        return f"<Chat(peer_id={self.peer_id}, ...)>"
 
 
 async def start_up():

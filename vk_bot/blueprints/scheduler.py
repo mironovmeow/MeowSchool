@@ -56,12 +56,7 @@ class Marks:
         return False
 
 
-stmt = select(Child).join(User).where(Child.marks_notify.is_(True))
-default_stmt = stmt.filter(User.donut_level == 0)
-ref_stmt = stmt.filter(User.donut_level == 1)
-donut_stmt = stmt.filter(User.donut_level == 2)
-vip_stmt = stmt.filter(User.donut_level == 3)
-admin_stmt = stmt.filter(User.donut_level == 4)
+childs_marks = select(Child).join(User).where(Child.marks_notify.is_(True))
 
 scheduler = AsyncIOScheduler()
 bp = Blueprint(name="Scheduler")  # use for message_send
@@ -130,42 +125,10 @@ async def marks_job(child: Child):
 
 
 # every 2 hours
-@scheduler.scheduled_job("cron", id="marks_default_job", hour="7-23/2", timezone="asia/krasnoyarsk")
+@scheduler.scheduled_job("cron", id="marks_job", hour="*/5", timezone="europe/moscow")
 async def default_scheduler():
-    logger.debug("Check default new marks")
-    for child in (await session.execute(default_stmt)).scalars():
-        await marks_job(child)
-
-
-# every 20 minutes
-@scheduler.scheduled_job("cron", id="marks_ref_job", minute="*/20", hour="7-23", timezone="asia/krasnoyarsk")
-async def ref_scheduler():
-    logger.debug("Check ref new marks")
-    for child in (await session.execute(ref_stmt)).scalars():
-        await marks_job(child)
-
-
-# every 10 minutes
-@scheduler.scheduled_job("cron", id="marks_donut_job", minute="*/10", hour="7-23", timezone="asia/krasnoyarsk")
-async def donut_scheduler():
-    logger.debug("Check donut new marks")
-    for child in (await session.execute(donut_stmt)).scalars():
-        await marks_job(child)
-
-
-# every 5 minutes
-@scheduler.scheduled_job("cron", id="marks_vip_job", minute="*/5", hour="7-23", timezone="asia/krasnoyarsk")
-async def vip_scheduler():
-    logger.debug("Check vip new marks")
-    for child in (await session.execute(vip_stmt)).scalars():
-        await marks_job(child)
-
-
-# every 2 minutes
-@scheduler.scheduled_job("cron", id="marks_admin_job", minute="*/2", hour="7-23", timezone="asia/krasnoyarsk")
-async def admin_scheduler():
-    logger.debug("Check admin new marks")
-    for child in (await session.execute(admin_stmt)).scalars():
+    logger.debug("Check new marks")
+    for child in (await session.execute(childs_marks)).scalars():
         await marks_job(child)
 
 

@@ -1,6 +1,7 @@
 """
 Private integration (all private message handler)
 """
+import json
 from typing import Optional, Tuple
 
 from vkbottle.bot import Blueprint, BotLabeler, Message, rules
@@ -12,7 +13,7 @@ from diary import APIError, DiaryApi
 from vk_bot import keyboard
 from vk_bot.db import Child, User
 from vk_bot.error_handler import diary_date_error_handler, message_error_handler
-from .other import MeowState, admin_log, get_peer_id, ref_activate, tomorrow
+from .other import MeowState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(False)])
 
@@ -41,8 +42,8 @@ async def password_handler(message: Message):
         api = await DiaryApi.auth_by_login(login, password)
         await User.create(
             message.peer_id,
-            login=login,
-            password=password
+            diary_session=api.diary_session,
+            diary_information=json.dumps(api.diary_information)
         )
         for child_id in range(len(api.user.children)):
             await Child.create(message.peer_id, child_id)
@@ -73,54 +74,6 @@ async def password_handler(message: Message):
             await e.session.close()
         else:  # problems with server
             raise e
-
-
-@bp.on.message(state=MeowState.REF_CODE)
-@message_error_handler.catch
-async def ref_code_handler(message: Message):
-    user: User = message.state_peer.payload["user"]
-
-    if not message.text:  # empty
-        await message.answer(
-            "🚧 Не вижу текст. Попробуй ещё раз.",
-            keyboard=keyboard.REF_CODE_BACK
-        )
-    else:
-        refry_id = await get_peer_id(message.text)
-        if not refry_id:
-            await message.answer(
-                "🚧 Не вижу id пользователя. Попробуй ещё раз.",
-                keyboard=keyboard.REF_CODE_BACK
-            )
-        elif refry_id == user.vk_id:
-            await message.answer(
-                "🚧 Нельзя стать рефералом самого себя. Попробуй ещё раз.",
-                keyboard=keyboard.REF_CODE_BACK
-            )
-        else:
-            refry = await bp.state_dispenser.get(refry_id)
-            if refry is None:
-                await message.answer(
-                    "🚧 Не вижу такого пользователя в системе. Попробуй ещё раз.",
-                    keyboard=keyboard.REF_CODE_BACK
-                )
-            else:
-                refry_user: User = refry.payload["user"]
-                user.refry_user = refry_user
-                await user.save()
-
-                await bp.state_dispenser.set(
-                    message.peer_id,
-                    MeowState.AUTH,
-                    api=message.state_peer.payload["api"],
-                    user=user
-                )
-
-                await ref_activate(refry_user, message.peer_id)
-                await message.answer(
-                    "✅ Успешно подключено!",
-                    keyboard=keyboard.settings(user)
-                )
 
 
 @bp.on.message(state=MeowState.NOT_AUTH)

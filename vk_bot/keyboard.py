@@ -174,18 +174,13 @@ def settings(user: User):
             green if child.marks_notify else white
         )
     else:
-        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), blue)
-
-    if user.refry_user is None:
-        keyboard.row()
-        keyboard.add(Callback("🎁Активировать реф.код", payload={"keyboard": "settings", "settings": "ref_code"}), blue)
+        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), white)
 
     keyboard.row()
     keyboard.add(Callback("⚠️Удалить аккаунт", payload={"keyboard": "settings", "settings": "delete"}), red)
     return keyboard.get_json()
 
 
-# todo refactor buttons and rows limit
 def settings_marks(user: User, children: List[ChildObject]):
     keyboard = Keyboard(inline=True)
 
@@ -194,25 +189,18 @@ def settings_marks(user: User, children: List[ChildObject]):
         keyboard.add(Callback(
             child_api.name[:40],  # workaround. label should be not more than 40 letters
             {"keyboard": "settings", "settings": "marks_child_select", "child_id": child.child_id}
-        ), green if child.marks > 0 else white)
+        ), green if child.marks_notify else white)
         if child_index % 2 == 1:
             keyboard.row()
     if len(user.children[:9]) % 2 == 1:
         keyboard.row()  # workaround. 6 rows max
-    keyboard.add(Callback("Вернуться", {"keyboard": "settings"}))
+    keyboard.add(Callback("Вернуться", {"keyboard": "settings"}), blue)
     return keyboard.get_json()
-
-
-REF_CODE_BACK = (
-    Keyboard(inline=True)
-    .add(Callback("⚙Назад", payload={"ref_code": "settings"}), white)
-    .get_json()
-)
 
 
 DELETE_VERIFY = (
     Keyboard(inline=True)
-    .add(Callback("⚠️Да, удалить аккаунт", payload={"keyboard": "settings", "settings": "delete_verify"}), red)
+    .add(Callback("⚠️Да, выйти из аккаунта", payload={"keyboard": "settings", "settings": "delete_verify"}), red)
     .row()
     .add(Callback("⚙Назад", payload={"keyboard": "settings"}), white)
     .get_json()

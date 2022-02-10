@@ -2,6 +2,7 @@
 Additional functions with blueprint integration (bp.state_dispenser and bp.api)
 """
 import datetime
+import json
 import re
 from asyncio import TimeoutError
 from typing import Optional
@@ -23,7 +24,6 @@ class MeowState(BaseStateGroup):
     LOGIN = -2
     PASSWORD = -1
     AUTH = 1
-    REF_CODE = 2
 
 
 # todo supporting sunday
@@ -40,24 +40,6 @@ async def admin_log(text: str):
         await bp.api.messages.send(
             message="🔔 Уведомление от системы!\n\n" + text,
             peer_id=peer_id,
-            random_id=0
-        )
-
-
-async def ref_activate(refry_user: User, referral_id: int):
-    referral_count = await refry_user.referral_count()
-    await bp.api.messages.send(
-        refry_user.vk_id,
-        message=f"🔔 Приглашён новый пользователь: @id{referral_id}",
-        random_id=0
-    )
-
-    if referral_count == 3 and refry_user.donut_level < 1:
-        refry_user.donut_level = 1
-        await refry_user.save()
-        await bp.api.messages.send(
-            refry_user.vk_id,
-            message="🔔 Вау, ты пригласил трёх людей в проект! Держи донатые уведомления",
             random_id=0
         )
 
@@ -79,22 +61,22 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
     count_user, count_chat = 0, 0
     for user in await User.get_all(chats=True, children=True):
         try:
-            if user.diary_session:
-                api = await DiaryApi.auth_by_diary_session(user.diary_session)
-            else:
-                api = await DiaryApi.auth_by_login(user.login, user.password)
+            api = await DiaryApi.auth_by_diary_session(
+                user.diary_session,
+                json.loads(user.diary_information)
+            )
             await bp.state_dispenser.set(user.vk_id, MeowState.AUTH, api=api, user=user)
             logger.debug(f"Auth id{user.vk_id} complete")
             count_user += 1
 
             for chat in user.chats:
                 await bp.state_dispenser.set(
-                    chat.chat_id,
+                    chat.peer_id,
                     MeowState.AUTH,
                     api=api,
                     user_id=user.vk_id
                 )
-                logger.debug(f"Auth chat{chat.chat_id - 2_000_000_000} complete")
+                logger.debug(f"Auth chat{chat.peer_id - 2_000_000_000} complete")
                 count_chat += 1
         except (APIError, TimeoutError):
             await bp.state_dispenser.set(user.vk_id, MeowState.NOT_AUTH, user=user)
@@ -102,11 +84,11 @@ async def auth_users_and_chats():  # todo рассмотреть вариант 
 
             for chat in user.chats:
                 await bp.state_dispenser.set(
-                    chat.chat_id,
+                    chat.peer_id,
                     MeowState.NOT_AUTH,
                     user_id=user.vk_id
                 )
-                logger.debug(f"Auth chat{chat.chat_id - 2_000_000_000} not complete")
+                logger.debug(f"Auth chat{chat.peer_id - 2_000_000_000} not complete")
 
     await admin_log("Бот запущен.\n"
                     f"🔸 Пользователи: {count_user}\n"
