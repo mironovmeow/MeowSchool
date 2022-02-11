@@ -31,19 +31,12 @@ class User(Base):
             vk_id: int,
             diary_session: str,
             diary_information: str
-    ) -> "User":  # todo try to optimize
+    ) -> "User":
         user = cls(vk_id=vk_id, diary_session=diary_session, diary_information=diary_information)
         session.add(user)
-        try:
-            await session.flush()
-            await session.commit()
-            return await session.get(User, vk_id)
-        except IntegrityError:  # todo?
-            user = await session.get(User, vk_id)
-            user.diary_session = diary_session
-            user.diary_information = diary_information
-            await session.commit()
-            return user
+        await session.flush()
+        await session.commit()
+        return await session.get(User, vk_id)
 
     @classmethod
     async def get(cls, vk_id: int, chats: bool = False, children: bool = False) -> Optional["User"]:

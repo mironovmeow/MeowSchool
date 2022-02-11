@@ -137,7 +137,9 @@ diary_date_error_handler = ErrorHandler(redirect_arguments=True)
 
 @diary_date_error_handler.register_error_handler(APIError)
 async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
-    if not e.json_success:
+    if e.code == 401:
+        await re_auth(e, message=m)
+    elif not e.json_success:
         logger.info(f"{e}: Wrong date {args[0]}")
         await m.answer("🚧 Указана неверная дата. Попробуйте ещё раз")
     else:

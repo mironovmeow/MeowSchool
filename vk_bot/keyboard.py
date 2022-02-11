@@ -62,14 +62,11 @@ def diary_week(date_str: str) -> str:
     return keyboard.get_json()
 
 
-# diary with lessons and near date selector
-# todo refactor buttons and rows limit
 def diary_day(
         date_str: str,
         lessons: List[DiaryLessonObject],
         lesson_id: int = 0
 ):
-    user_date = datetime.date(*map(int, date_str.split(".")[::-1]))
     keyboard = Keyboard(inline=True)
 
     # add lesson select
@@ -84,31 +81,10 @@ def diary_day(
     if len(lessons[:9]) % 2 == 1:
         keyboard.row()
 
-    if len(lessons) <= 7:  # workaround. 10 buttons max
-        # add day control menu
-        keyboard.add(Callback(
-            "➖День",
-            {
-                "keyboard": "diary",
-                "date": (user_date - datetime.timedelta(days=1)).strftime("%d.%m.%Y"),
-                "lesson": 0
-            }
-        ), white)
-        keyboard.add(Callback(
-            "➕День",
-            {
-                "keyboard": "diary",
-                "date": (user_date + datetime.timedelta(days=1)).strftime("%d.%m.%Y"),
-                "lesson": 0
-            }
-        ), white)
-
     keyboard.row()
     keyboard.add(Callback(
         "Скрыть", {"keyboard": "diary", "date": date_str}
     ), white)
-
-    # no user select. workaround. 10 buttons max
 
     return keyboard.get_json()
 
@@ -168,6 +144,8 @@ def settings_child_select(children: List[ChildObject], child_id: int):
             child.name,
             {"keyboard": "settings", "settings": "child_select", "child_id": e}
         ), green if e == child_id else white)
+    keyboard.row()
+    keyboard.add(Callback("⚙Назад", payload={"keyboard": "settings"}), white)
     return keyboard.get_json()
 
 

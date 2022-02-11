@@ -76,6 +76,83 @@ async def password_handler(message: Message):
             raise e
 
 
+@bp.on.message(state=MeowState.RE_LOGIN)
+@message_error_handler.catch
+async def re_auth_login_handler(message: Message):
+    if not message.text:  # empty
+        await bp.state_dispenser.set(message.peer_id, MeowState.RE_LOGIN)
+        await message.answer(
+            "🚧 Произошла непредвиденная ошибка. Это случается редко, но необходимо заново авторизоваться.\n\n"
+            "🔒 Отправь первым сообщением логин.",
+            dont_parse_links=True,
+            keyboard=keyboard.EMPTY
+        )
+    await bp.state_dispenser.set(message.peer_id, MeowState.RE_PASSWORD, login=message.text)
+    await message.answer(
+        message="🔑 А теперь введите пароль."
+    )
+
+
+@bp.on.message(state=MeowState.RE_PASSWORD)
+@message_error_handler.catch
+async def re_auth_password_handler(message: Message):
+    if not message.text:  # empty
+        await bp.state_dispenser.set(message.peer_id, MeowState.RE_LOGIN)
+        await message.answer(
+            "🚧 Произошла непредвиденная ошибка. Это случается редко, но необходимо заново авторизоваться.\n\n"
+            "🔒 Отправь первым сообщением логин.",
+            dont_parse_links=True,
+            keyboard=keyboard.EMPTY
+        )
+    login = message.state_peer.payload.get("login")
+    password = message.text
+    try:
+        api = await DiaryApi.auth_by_login(login, password)
+
+        for child_id in range(len(api.user.children)):
+            await Child.create(message.peer_id, child_id)
+        user = await User.get(vk_id=message.peer_id, chats=True, children=True)
+        user.diary_session = api.diary_session
+        user.diary_information = json.dumps(api.diary_information)
+        await user.save()
+
+        for chat in user.chats:
+            await bp.state_dispenser.set(
+                chat.peer_id,
+                MeowState.AUTH,
+                api=api,
+                user_id=user.vk_id,
+                child_id=0
+            )
+            logger.debug(f"Auth chat{chat.peer_id - 2_000_000_000} complete")
+
+        await bp.state_dispenser.set(message.peer_id, MeowState.AUTH, api=api, user=user, child_id=0)
+
+        logger.info(f"Re-auth complete: id{message.peer_id}")
+        await message.answer(
+            message="🔓 Вы успешно авторизовались!\n"
+                    "Воспользуйтесь кнопками снизу или напишите /помощь (/help) для команд",
+            keyboard=keyboard.MENU
+        )
+    except APIError as e:
+        if not e.json_success:
+            await bp.state_dispenser.set(message.peer_id, MeowState.RE_LOGIN)
+            error_message = e.json.get("message")
+            if error_message:
+                await message.answer(
+                    message=f"🚧 {error_message}\n\n"
+                            "🔒 Отправь первым сообщением логин."
+                )
+            else:
+                await message.answer(
+                    message="🚧 Неправильный логин или пароль. Повторите попытку ещё раз.\n\n"
+                            "🔒 Отправь первым сообщением логин."
+                )
+            await e.session.close()
+        else:  # problems with server
+            raise e
+
+
 @bp.on.message(state=MeowState.NOT_AUTH)
 @message_error_handler.catch
 async def not_auth_handler(message: Message):

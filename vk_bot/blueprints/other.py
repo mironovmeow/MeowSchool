@@ -11,6 +11,7 @@ from vkbottle.bot import Blueprint, Message, MessageEvent
 from vkbottle.modules import logger
 
 from diary import APIError, DiaryApi
+from vk_bot import keyboard
 from vk_bot.db import User
 
 ADMINS = [
@@ -19,6 +20,9 @@ ADMINS = [
 
 
 class MeowState(BaseStateGroup):
+    RE_LOGIN = -12
+    RE_PASSWORD = -11
+
     NOT_AUTH = -3  # todo logic
     LOGIN = -2
     PASSWORD = -1
@@ -46,12 +50,32 @@ async def admin_log(text: str):
 async def re_auth(error: APIError, message: Optional[Message] = None, event: Optional[MessageEvent] = None):
     if message:
         logger.info(f"Re-auth {message.peer_id}")
-        # todo re-auth
+        peer_id = message.peer_id
     elif event:
         logger.info(f"Re-auth {event.peer_id}")
-        # todo re-auth
+        peer_id = event.peer_id
     else:
-        ...
+        raise ValueError()
+
+    if peer_id > 2_000_000_000:  # is chat
+        await bp.api.messages.send(
+            peer_id=peer_id,
+            message="🚧 Произошла непредвиденная ошибка. Это случается редко, но необходимо заново авторизоваться.\n\n"
+                    "🔒 Это необходимо сделать в личных сообщениях бота тому, кто активировал этого бота.",
+            random_id=0
+        )
+    else:
+        await error.session.close()
+
+        await admin_log(f"Произошёл re-auth @id{peer_id}")
+        await bp.state_dispenser.set(message.peer_id, MeowState.RE_LOGIN)
+        await bp.api.messages.send(
+            peer_id=peer_id,
+            message="🚧 Произошла непредвиденная ошибка. Это случается редко, но необходимо заново авторизоваться.\n\n"
+                    "🔒 Отправь первым сообщением логин.",
+            random_id=0,
+            keyboard=keyboard.EMPTY
+        )
 
 
 async def auth_users_and_chats():
