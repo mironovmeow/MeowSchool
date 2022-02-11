@@ -81,7 +81,6 @@ def diary_day(
     if len(lessons[:9]) % 2 == 1:
         keyboard.row()
 
-    keyboard.row()
     keyboard.add(Callback(
         "Скрыть", {"keyboard": "diary", "date": date_str}
     ), white)
