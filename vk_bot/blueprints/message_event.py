@@ -248,7 +248,8 @@ async def delete_verify_handler(event: MessageEvent):
     await user.delete()
 
     api: DiaryApi = state_peer.payload["api"]
-    await api.close()
+    await api.logout()
+    await api.close_session()
 
     await bp.state_dispenser.delete(event.peer_id)
 

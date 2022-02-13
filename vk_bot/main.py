@@ -32,7 +32,7 @@ async def _close_session():
         if peer_id < 2000000000:  # if user
             api: DiaryApi = state_peer.payload.get("api")
             if api:  # not None
-                await api.close()
+                await api.close_session()
 
 
 loop_wrapper = LoopWrapper(

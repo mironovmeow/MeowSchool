@@ -110,7 +110,10 @@ async def re_auth_password_handler(message: Message):
         api = await DiaryApi.auth_by_login(login, password)
 
         for child_id in range(len(api.user.children)):
-            await Child.create(message.peer_id, child_id)
+            try:
+                await Child.create(message.peer_id, child_id)
+            finally:
+                pass
         user = await User.get(vk_id=message.peer_id, chats=True, children=True)
         user.diary_session = api.diary_session
         user.diary_information = json.dumps(api.diary_information)

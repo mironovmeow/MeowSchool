@@ -27,11 +27,18 @@ async def admin_ping_command(message: Message):
 async def admin_delete_command(message: Message, vk_id: int):
     state_peer = await bp.state_dispenser.get(vk_id)
     if state_peer:
-        user: User = state_peer.payload["user"]
+        try:
+            user: User = state_peer.payload["user"]
+        except KeyError:
+            user: User = await User.get(248525108)
         await user.delete()
 
-        api: DiaryApi = state_peer.payload["api"]
-        await api.close()
+        try:
+            api: DiaryApi = state_peer.payload["api"]
+            await api.logout()
+            await api.close_session()
+        finally:
+            pass
 
         await bp.state_dispenser.delete(vk_id)
 

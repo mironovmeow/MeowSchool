@@ -45,6 +45,13 @@ class DiaryApi:
         self.diary_session = diary_session
         self.user = types.LoginObject.reformat(diary_information)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.logout()
+        await self.close_session()
+
     def __str__(self) -> str:
         return f'<DiaryApi {self.user.fio}>'
 
@@ -52,7 +59,7 @@ class DiaryApi:
     def closed(self) -> bool:
         return self._session.closed
 
-    async def close(self) -> None:
+    async def close_session(self) -> None:
         logger.info(f"Closing DiaryApi {self.user.fio}")
         await self._session.close()
 
