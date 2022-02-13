@@ -23,7 +23,7 @@ async def admin_ping_command(message: Message):
 
 
 @bp.on.message(text="!delete <vk_id:int>")
-@message_error_handler.catch
+@message_error_handler.catch  # do something
 async def admin_delete_command(message: Message, vk_id: int):
     state_peer = await bp.state_dispenser.get(vk_id)
     if state_peer:
@@ -37,7 +37,7 @@ async def admin_delete_command(message: Message, vk_id: int):
             api: DiaryApi = state_peer.payload["api"]
             await api.logout()
             await api.close_session()
-        finally:
+        except:
             pass
 
         await bp.state_dispenser.delete(vk_id)

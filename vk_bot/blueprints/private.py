@@ -112,7 +112,7 @@ async def re_auth_password_handler(message: Message):
         for child_id in range(len(api.user.children)):
             try:
                 await Child.create(message.peer_id, child_id)
-            finally:
+            except:
                 pass
         user = await User.get(vk_id=message.peer_id, chats=True, children=True)
         user.diary_session = api.diary_session
