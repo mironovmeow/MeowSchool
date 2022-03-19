@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, dev ]
+    paths:
+      - 'vk_bot/**'
+      - '.flake8'
+      - '.github/workflows/ci.yml'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [ master, dev ]
+    paths:
+      - 'vk_bot/**'
+      - '.flake8'
+      - '.github/workflows/ci.yml'
+      - 'pyproject.toml'
+
+jobs:
+  testing:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - 3.9
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade/install pip and poetry
+        run: python -m pip install --upgrade pip poetry
+
+      - name: Install dependencies
+        run: poetry install
+
+      # formatters
+      - name: Run black
+        run: poetry run black vk_bot --check
+
+      - name: Run isort
+        run: poetry run isort vk_bot --check
+
+      # linters
+      - name: Run flake8
+        run: poetry run flake8
+
+      - name: Run mypy
+        run: poetry run mypy vk_bot
+
+      # tests
+      - name: Run pytest
+        run: poetry run pytest

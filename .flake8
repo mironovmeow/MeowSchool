@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 99
+# E203 https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#line-breaks-binary-operators
+ignore = E203
