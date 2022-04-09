@@ -3,15 +3,17 @@ Chat integration (all chat message handler)
 """
 from typing import Tuple
 
+from barsdiary.aio import DiaryApi
+from loguru import logger
 from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 from vkbottle.dispatch.dispenser import get_state_repr
-from vkbottle.modules import logger
 from vkbottle_types.objects import MessagesMessageActionStatus
 
-from diary import DiaryApi
 from vk_bot import keyboard
 from vk_bot.db import Chat
+from vk_bot.diary_infromation import diary_info
 from vk_bot.error_handler import diary_date_error_handler, message_error_handler
+
 from .other import MeowState, admin_log, tomorrow
 
 labeler = BotLabeler(auto_rules=[rules.PeerRule(True)])
@@ -26,17 +28,18 @@ async def invite_handler(message: Message):
         if message.state_peer:  # if auth  todo check logic
             chat = await Chat.get(message.peer_id)
             user_state_peer = await bp.state_dispenser.get(chat.vk_id)
-            await bp.state_dispenser.set(  # todo add chat to state?  L73
+            await bp.state_dispenser.set(
                 message.peer_id,
                 MeowState.AUTH,
                 api=user_state_peer.payload["api"],
                 user_id=message.from_id,
-                child_id=0
+                child_id=0,
             )
 
             await message.answer(
-                "🔓 Эта беседа уже авторизована! Напишите /помощь (/help) для получения списка всех команд.",
-                reply_to=message.id
+                "🔓 Эта беседа уже авторизована! "
+                "Напишите /помощь (/help) для получения списка всех команд.",
+                reply_to=message.id,
             )
         else:
             await message.answer(
@@ -46,6 +49,7 @@ async def invite_handler(message: Message):
         logger.info(f"Get new chat: {message.peer_id}")
 
 
+# TODO TODO TODO TODO
 @bp.on.message(state=MeowState.NOT_AUTH)
 @message_error_handler.catch
 async def not_auth_handler(message: Message):
@@ -57,19 +61,14 @@ async def not_auth_handler(message: Message):
 @message_error_handler.catch
 async def stop_command(message: Message):
     if not message.state_peer:  # if not auth
-        await message.answer(
-            "🔒 Эта беседа не авторизована. Бота можно просто удалить из беседы"
-        )
+        await message.answer("🔒 Эта беседа не авторизована. Бота можно просто удалить из беседы")
     else:  # if auth
         user_id: int = message.state_peer.payload["user_id"]
         if message.from_id != user_id:
-            await message.answer(
-                "🚧 Эту команду может вызвать только тот, кто авторизовал беседу"
-            )
+            await message.answer("🚧 Эту команду может вызвать только тот, кто авторизовал беседу")
         else:
             await message.answer(
-                "👋 Был рад с вами поработать\n"
-                "🔒 Теперь бота можно удалить из беседы"
+                "👋 Был рад с вами поработать\n🔒 Теперь бота можно удалить из беседы"
             )
             chat = await Chat.get(message.peer_id)
             await bp.state_dispenser.delete(message.peer_id)
@@ -106,7 +105,7 @@ async def start_command(message: Message):
             await message.answer(
                 "🔒 Для начала, нужно авторизоваться в личных сообщениях бота: vk.me/schoolbot04, "
                 "затем здесь написать /начать (/start).",
-                reply_to=message.id
+                reply_to=message.id,
             )
 
         else:
@@ -115,14 +114,15 @@ async def start_command(message: Message):
                 MeowState.AUTH,
                 api=user_state_peer.payload["api"],
                 user_id=message.from_id,
-                child_id=0
+                child_id=0,
             )
 
             await Chat.create(message.peer_id, message.from_id)
 
             await message.answer(
-                "🔓 Беседа авторизована успешно! Напишите /помощь (/help) для получения списка всех команд.",
-                reply_to=message.id
+                "🔓 Беседа авторизована успешно! "
+                "Напишите /помощь (/help) для получения списка всех команд.",
+                reply_to=message.id,
             )
             await admin_log(f"Новая беседа авторизована.\nchat{message.chat_id}")
             logger.info(f"Auth new chat: chat{message.chat_id}")
@@ -130,12 +130,14 @@ async def start_command(message: Message):
         await message.answer(
             "🔓 Беседа уже авторизована!\n"
             "Воспользуйтесь командой /помощь (/help) для получения списка всех команд.",
-            reply_to=message.id
+            reply_to=message.id,
         )
 
 
 # todo flood control
-@bp.on.message(rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=MeowState.AUTH)
+@bp.on.message(
+    rules.CommandRule(("дневник", 1)) | rules.CommandRule(("diary", 1)), state=MeowState.AUTH
+)
 @diary_date_error_handler.catch
 async def diary_command(message: Message, args: Tuple[str]):
     date = args[0]
@@ -143,9 +145,9 @@ async def diary_command(message: Message, args: Tuple[str]):
     child_id: int = message.state_peer.payload["child_id"]
     diary = await api.diary(date, child=child_id)
     await message.answer(
-        message=diary.info(is_chat=True),
+        message=diary_info(diary, is_chat=True),
         keyboard=keyboard.diary_week(date),
-        dont_parse_links=True
+        dont_parse_links=True,
     )
 
 

@@ -5,12 +5,12 @@ from asyncio import TimeoutError
 from typing import Tuple, Union
 
 from aiohttp import ClientError
+from barsdiary.aio import APIError
 from loguru import logger
 from pydantic import ValidationError
 from vkbottle import ErrorHandler, VKAPIError
 from vkbottle.bot import Message, MessageEvent
 
-from diary.types import APIError
 from .blueprints.other import admin_log, re_auth
 from .db import Child
 
@@ -24,7 +24,9 @@ async def message_diary(e: APIError, m: Message):
 
     elif e.code >= 400:
         logger.warning(f"{e}: Server error")
-        await m.answer("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
+        await m.answer(
+            "🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже"
+        )
 
     else:
         logger.warning(f"{e}: Server error")
@@ -80,7 +82,9 @@ async def callback_diary(e: APIError, event: MessageEvent):
 
     elif e.code >= 400:
         logger.warning(f"{e}: Server error")
-        await event.show_snackbar("🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже")
+        await event.show_snackbar(
+            "🚧 Временные неполадки с сервером электронного дневника. Повторите попытку позже"
+        )
 
     else:
         logger.warning(f"{e}: Server error")
@@ -102,7 +106,9 @@ async def callback_vk_9(e: VKAPIError, event: MessageEvent):
 @callback_error_handler.register_error_handler(VKAPIError[909])
 async def callback_vk_909(e: VKAPIError, event: MessageEvent):
     logger.info(f"VKApi edit message error: {e.description} {e.code}")
-    await event.show_snackbar("🚧 Сообщение слишком старое. Ещё раз напишите команду или нажмите на кнопку в меню")
+    await event.show_snackbar(
+        "🚧 Сообщение слишком старое. Ещё раз напишите команду или нажмите на кнопку в меню"
+    )
 
 
 @callback_error_handler.register_error_handler(VKAPIError)
@@ -147,7 +153,7 @@ async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
 
 
 @diary_date_error_handler.register_undefined_error_handler
-async def diary_date(e: BaseException, m: Message, args):
+async def diary_date(e: BaseException, m: Message, _):
     return await message_error_handler.handle(e, m)
 
 
@@ -169,7 +175,7 @@ async def vkbottle_pydantic(e: ValidationError):  # vkbottle_types
 @vkbottle_error_handler.register_undefined_error_handler
 async def vkbottle(_: BaseException):
     logger.exception("Error in vkbottle module")
-    await admin_log(f"Ошибка в vkbottle")
+    await admin_log("Ошибка в vkbottle")
 
 
 scheduler_error_handler = ErrorHandler(True)
@@ -186,7 +192,7 @@ async def scheduler_diary(e: APIError, child: Child):
 
 
 @scheduler_error_handler.register_error_handler(TimeoutError, ClientError)
-async def scheduler_aiohttp_timeout(e: Union[TimeoutError, ClientError], child: Child):
+async def scheduler_aiohttp_timeout(e: Union[TimeoutError, ClientError], _):
     logger.info(f"Server error {e}")
 
 

@@ -1,10 +1,10 @@
 import sys
 
+from barsdiary.aio import DiaryApi
 from loguru import logger
 from vkbottle import LoopWrapper
 from vkbottle.bot import Bot
 
-from diary import DiaryApi
 from .blueprints import admin, chat, message_event, other, private, scheduler
 from .db import close, start_up
 from .error_handler import vkbottle_error_handler
@@ -36,14 +36,8 @@ async def _close_session():
 
 
 loop_wrapper = LoopWrapper(
-    on_startup=[
-        start_up(),
-        other.auth_users_and_chats(),
-        scheduler.start()
-    ],
-    on_shutdown=[
-        _close_session()
-    ]
+    on_startup=[start_up(), other.auth_users_and_chats(), scheduler.start()],
+    on_shutdown=[_close_session()],
 )
 
 bot = Bot(TOKEN, loop_wrapper=loop_wrapper, error_handler=vkbottle_error_handler)

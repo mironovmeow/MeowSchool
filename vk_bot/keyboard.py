@@ -2,9 +2,9 @@
 import datetime
 from typing import List
 
+from barsdiary.types import ChildObject, DiaryLessonObject
 from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
-from diary.types import ChildObject, DiaryLessonObject
 from .db import User
 
 white = KeyboardButtonColor.SECONDARY
@@ -31,59 +31,59 @@ def diary_week(date_str: str) -> str:
             color = blue
         else:
             color = white
-        keyboard.add(Callback(
-            date,
-            {"keyboard": "diary", "date": date}
-        ), color)
+        keyboard.add(Callback(date, {"keyboard": "diary", "date": date}), color)
 
     keyboard.row()
 
     # add week control menu
-    keyboard.add(Callback(
-        "➖Неделя",
-        {
-            "keyboard": "diary",
-            "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")
-        }
-    ), white)
-    keyboard.add(Callback(
-        "➕Неделя",
-        {
-            "keyboard": "diary",
-            "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y")
-        }
-    ), white)
+    keyboard.add(
+        Callback(
+            "➖Неделя",
+            {
+                "keyboard": "diary",
+                "date": (user_date - datetime.timedelta(weeks=1)).strftime("%d.%m.%Y"),
+            },
+        ),
+        white,
+    )
+    keyboard.add(
+        Callback(
+            "➕Неделя",
+            {
+                "keyboard": "diary",
+                "date": (user_date + datetime.timedelta(weeks=1)).strftime("%d.%m.%Y"),
+            },
+        ),
+        white,
+    )
 
     keyboard.row()
-    keyboard.add(Callback(
-        "Подробнее", {"keyboard": "diary", "date": date_str, "lesson": 0}
-    ), white)
+    keyboard.add(
+        Callback("Подробнее", {"keyboard": "diary", "date": date_str, "lesson": 0}), white
+    )
 
     return keyboard.get_json()
 
 
-def diary_day(
-        date_str: str,
-        lessons: List[DiaryLessonObject],
-        lesson_id: int = 0
-):
+def diary_day(date_str: str, lessons: List[DiaryLessonObject], lesson_id: int = 0):
     keyboard = Keyboard(inline=True)
 
     # add lesson select
     if len(lessons) > 0:
         for lesson_index, lesson in enumerate(lessons[:9]):  # workaround. 10 buttons max
-            keyboard.add(Callback(
-                lesson.discipline[:40],  # workaround. label should be not more than 40 letters
-                {"keyboard": "diary", "date": date_str, "lesson": lesson_index}
-            ), green if lesson_index == lesson_id else white)
+            keyboard.add(
+                Callback(
+                    lesson.discipline[:40],  # workaround. label should be not more than 40 letters
+                    {"keyboard": "diary", "date": date_str, "lesson": lesson_index},
+                ),
+                green if lesson_index == lesson_id else white,
+            )
             if lesson_index % 2 == 1:
                 keyboard.row()
     if len(lessons[:9]) % 2 == 1:
         keyboard.row()
 
-    keyboard.add(Callback(
-        "Скрыть", {"keyboard": "diary", "date": date_str}
-    ), white)
+    keyboard.add(Callback("Скрыть", {"keyboard": "diary", "date": date_str}), white)
 
     return keyboard.get_json()
 
@@ -92,15 +92,16 @@ def diary_day(
 def marks_stats(date: str, count: bool = False) -> str:
     keyboard = Keyboard(inline=True)
     if count:
-        keyboard.add(Callback(
-            "📈 Средний балл",
-            {"keyboard": "marks", "date": date, "count": False}
-        ), white)
+        keyboard.add(
+            Callback("📈 Средний балл", {"keyboard": "marks", "date": date, "count": False}), white
+        )
     else:
-        keyboard.add(Callback(
-            "🔢 Статистика по оценкам",
-            {"keyboard": "marks", "date": date, "count": True}
-        ), white)
+        keyboard.add(
+            Callback(
+                "🔢 Статистика по оценкам", {"keyboard": "marks", "date": date, "count": True}
+            ),
+            white,
+        )
 
     return keyboard.get_json()
 
@@ -122,16 +123,33 @@ def settings(user: User):
     if user and len(user.children) == 1:
         child = user.children[0]
         keyboard.add(
-            Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks", "child_id": child.child_id}),
-            green if child.marks_notify else white
+            Callback(
+                "🔢Оценки",
+                payload={"keyboard": "settings", "settings": "marks", "child_id": child.child_id},
+            ),
+            green if child.marks_notify else white,
         )
     else:
-        keyboard.add(Callback("🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}), white)
+        keyboard.add(
+            Callback(
+                "🔢Оценки", payload={"keyboard": "settings", "settings": "marks_child_select"}
+            ),
+            white,
+        )
+
+        keyboard.row()
+        keyboard.add(
+            Callback(
+                "Выбрать аккаунт", payload={"keyboard": "settings", "settings": "child_select"}
+            ),
+            white,
+        )
 
     keyboard.row()
-    keyboard.add(Callback("Выбрать аккаунт", payload={"keyboard": "settings", "settings": "child_select"}), white)
-    keyboard.row()
-    keyboard.add(Callback("⚠️Выйти из аккаунта", payload={"keyboard": "settings", "settings": "delete"}), red)
+    keyboard.add(
+        Callback("⚠️Выйти из аккаунта", payload={"keyboard": "settings", "settings": "delete"}),
+        red,
+    )
     return keyboard.get_json()
 
 
@@ -139,10 +157,12 @@ def settings_child_select(children: List[ChildObject], child_id: int):
     keyboard = Keyboard(inline=True)
     for e, child in enumerate(children):
         keyboard.row()
-        keyboard.add(Callback(
-            child.name,
-            {"keyboard": "settings", "settings": "child_select", "child_id": e}
-        ), green if e == child_id else white)
+        keyboard.add(
+            Callback(
+                child.name, {"keyboard": "settings", "settings": "child_select", "child_id": e}
+            ),
+            green if e == child_id else white,
+        )
     keyboard.row()
     keyboard.add(Callback("⚙Назад", payload={"keyboard": "settings"}), white)
     return keyboard.get_json()
@@ -153,10 +173,17 @@ def settings_marks(user: User, children: List[ChildObject]):
 
     for child_index, child in enumerate(user.children[:9]):  # workaround. 10 buttons max
         child_api = children[child_index]
-        keyboard.add(Callback(
-            child_api.name[:40],  # workaround. label should be not more than 40 letters
-            {"keyboard": "settings", "settings": "marks_child_select", "child_id": child.child_id}
-        ), green if child.marks_notify else white)
+        keyboard.add(
+            Callback(
+                child_api.name[:40],  # workaround. label should be not more than 40 letters
+                {
+                    "keyboard": "settings",
+                    "settings": "marks_child_select",
+                    "child_id": child.child_id,
+                },
+            ),
+            green if child.marks_notify else white,
+        )
         if child_index % 2 == 1:
             keyboard.row()
     if len(user.children[:9]) % 2 == 1:
@@ -167,7 +194,13 @@ def settings_marks(user: User, children: List[ChildObject]):
 
 DELETE_VERIFY = (
     Keyboard(inline=True)
-    .add(Callback("⚠️Да, выйти из аккаунта", payload={"keyboard": "settings", "settings": "delete_verify"}), red)
+    .add(
+        Callback(
+            "⚠️Да, выйти из аккаунта",
+            payload={"keyboard": "settings", "settings": "delete_verify"},
+        ),
+        red,
+    )
     .row()
     .add(Callback("⚙Назад", payload={"keyboard": "settings"}), white)
     .get_json()

@@ -5,23 +5,17 @@ import datetime
 from typing import Dict, List, Optional, Tuple
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from barsdiary.aio import DiaryApi
 from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
-from diary import DiaryApi
 from vk_bot.blueprints.other import admin_log
 from vk_bot.db import Child, User, select, session
 from vk_bot.error_handler import scheduler_error_handler
 
 
 class Marks:
-    def __init__(
-            self,
-            lesson: str,
-            date: str,
-            text: str,
-            mark: str
-    ):
+    def __init__(self, lesson: str, date: str, text: str, mark: str):
         self.lesson = lesson
         self.date = date
         self.text = text
@@ -30,7 +24,7 @@ class Marks:
     @classmethod
     async def from_api(cls, child: Child) -> Tuple[Dict["Marks", int], Optional[str]]:
         state_peer = await bp.state_dispenser.get(child.vk_id)
-        if state_peer:  # todo обработка удаления state_peer
+        if state_peer:
             api: DiaryApi = state_peer.payload["api"]
             lessons_score = await api.lessons_scores(_today(), child=child.child_id)
             ans = {}
@@ -49,10 +43,12 @@ class Marks:
 
     def __eq__(self, other):
         if isinstance(other, Marks):
-            return self.lesson == other.lesson and \
-                   self.date == other.date and \
-                   self.text == other.text and \
-                   self.mark == other.mark
+            return (
+                self.lesson == other.lesson
+                and self.date == other.date
+                and self.text == other.text
+                and self.mark == other.mark
+            )
         return False
 
 
@@ -75,9 +71,7 @@ async def marks_job(child: Child):
 
     if old_period != new_period:  # new period
         await bp.api.messages.send(
-            child.vk_id,
-            message=f"🔔 Изменение периода в оценках: {new_period}.\n",
-            random_id=0
+            child.vk_id, message=f"🔔 Изменение периода в оценках: {new_period}.\n", random_id=0
         )
         old_marks = new_marks
         DATA[child] = ({}, new_period)
@@ -94,17 +88,13 @@ async def marks_job(child: Child):
             changed_marks.setdefault(mark.date, {})
             changed_marks[mark.date].setdefault(mark.lesson, [])
             for _ in range(new_count - old_count):
-                changed_marks[mark.date][mark.lesson].append(
-                    f"✅ {mark.mark}⃣ {mark.text}"
-                )
+                changed_marks[mark.date][mark.lesson].append(f"✅ {mark.mark}⃣ {mark.text}")
 
         elif new_count < old_count:  # old mark
             changed_marks.setdefault(mark.date, {})
             changed_marks[mark.date].setdefault(mark.lesson, [])
             for _ in range(old_count - new_count):
-                changed_marks[mark.date][mark.lesson].append(
-                    f"❌ {mark.mark}⃣ {mark.text}"
-                )
+                changed_marks[mark.date][mark.lesson].append(f"❌ {mark.mark}⃣ {mark.text}")
 
     if changed_marks:
         if len(child.user.children) > 1:
@@ -124,8 +114,8 @@ async def marks_job(child: Child):
         DATA[child] = new_marks, new_period
 
 
-# every 2 hours
-@scheduler.scheduled_job("cron", id="marks_job", hour="*/5", timezone="europe/moscow")
+# every 5 minute
+@scheduler.scheduled_job("cron", id="marks_job", minute="*/5", timezone="europe/moscow")
 async def default_scheduler():
     logger.debug("Check new marks")
     for child in (await session.execute(childs_marks)).scalars():
@@ -136,14 +126,13 @@ async def start():
     children_count = 0
 
     child: Child
-    for child in (await session.execute(select(Child).where(Child.marks_notify.is_(True)))).scalars():
+    for child in (
+        await session.execute(select(Child).where(Child.marks_notify.is_(True)))
+    ).scalars():
         children_count += 1
         DATA[child] = await Marks.from_api(child)
 
-    await admin_log(
-        "Уведомления запущены.\n"
-        f"🔸 Уведомления: {children_count}"
-    )
+    await admin_log("Уведомления запущены.\n" f"🔸 Уведомления: {children_count}")
     scheduler.start()
 
 

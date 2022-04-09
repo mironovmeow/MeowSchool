@@ -1,11 +1,12 @@
 """
 Admin features and commands
 """
+from barsdiary.aio import DiaryApi
 from vkbottle.bot import Blueprint, BotLabeler, Message, rules
 
-from diary import DiaryApi
 from vk_bot.db import Chat, Child, User
 from vk_bot.error_handler import message_error_handler
+
 from .other import ADMINS
 
 IsAdmin = rules.FromPeerRule(ADMINS)
@@ -28,16 +29,16 @@ async def admin_delete_command(message: Message, vk_id: int):
     state_peer = await bp.state_dispenser.get(vk_id)
     if state_peer:
         try:
-            user: User = state_peer.payload["user"]
-        except KeyError:
-            user: User = await User.get(248525108)
-        await user.delete()
+            user = await User.get(vk_id)
+            await user.delete()
+        finally:
+            pass
 
         try:
             api: DiaryApi = state_peer.payload["api"]
             await api.logout()
             await api.close_session()
-        except:
+        finally:
             pass
 
         await bp.state_dispenser.delete(vk_id)

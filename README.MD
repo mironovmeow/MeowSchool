@@ -6,5 +6,8 @@
 
 ## Contribution
 
-Я открыт для PR, если кому-то интересен развитие моего проекта. Если у вас есть вопросы, идеи и предложения, их
-лучше направлять [сюда](https://vk.me/meow_py) или [сюда](https://t.me/mironovmeow).
+Я открыт для PR, если кому-то интересен развитие моего проекта. Вот [небольшая инструкция](CONTRIBUTION_GUIDE.md)
+по установке проекта. Если у вас есть вопросы, идеи и предложения, их лучше направлять сюда:
+
+[![VK](https://img.shields.io/badge/-@mironovmeow-555?logo=vk)](https://vk.com/mironovmeow)
+[![Telegram](https://img.shields.io/badge/@mironovmeow-555?logo=telegram)](https://t.me/mironovmeow)    
