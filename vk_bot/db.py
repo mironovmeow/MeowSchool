@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import Mapped, declarative_base, relationship
 
 Base = declarative_base()
 engine = create_async_engine("sqlite+aiosqlite:///db.sqlite3", future=True)
@@ -20,8 +20,8 @@ class User(Base):
     diary_session = Column(String, nullable=False)
     diary_information = Column(String, nullable=False)
 
-    children = relationship("Child", lazy="selectin", cascade="all")
-    chats = relationship("Chat", lazy="selectin", cascade="all")
+    children: Mapped["Child"] = relationship("Child", lazy="selectin", cascade="all")
+    chats: Mapped["Chat"] = relationship("Chat", lazy="selectin", cascade="all")
 
     @classmethod
     async def create(cls, vk_id, diary_session, diary_information, children, chats) -> "User":
@@ -42,7 +42,7 @@ class User(Base):
 
     @classmethod
     async def get_all(cls) -> List["User"]:
-        return (await session.execute(select(cls))).scalars()
+        return (await session.execute(select(cls))).scalars().all()
 
     @staticmethod
     async def save():
@@ -101,6 +101,10 @@ class Chat(Base):
 
     peer_id = Column(Integer, primary_key=True)
     vk_id = Column(Integer, ForeignKey("users.vk_id"), nullable=False)
+
+    @classmethod
+    async def get(cls, peer_id) -> Optional["Chat"]:
+        return await session.get(cls, peer_id)
 
     @staticmethod
     async def count() -> int:

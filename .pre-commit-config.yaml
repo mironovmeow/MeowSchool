@@ -21,8 +21,8 @@ repos:
         types: [ python ]
         language: system
 
-      - id: mypy
-        name: mypy
-        entry: poetry run mypy -m vk_bot
-        language: system
-        pass_filenames: false
+#      - id: mypy
+#        name: mypy
+#        entry: poetry run mypy main.py
+#        language: system
+#        pass_filenames: false

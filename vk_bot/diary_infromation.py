@@ -62,7 +62,7 @@ _day_of_week: List[str] = [
 def diary_day_info(obj: DiaryDayObject, is_chat: bool, lesson_id: Optional[int] = None) -> str:
     text = f"📅 {_day_of_week[obj.date.weekday()]} [{obj.date_str}]\n\n"
     if not obj.lessons:
-        text += obj.kind
+        text += obj.kind or ""
     elif lesson_id is None:
         text += "\n\n".join(diary_lesson_info(lesson, is_chat) for lesson in obj.lessons)
     else:
@@ -90,7 +90,7 @@ def _bar(mark: float) -> str:  # for progress_data_info
 def progress_data_info(obj: ProgressDataObject):
     return "\n".join(
         f"{_bar(mark)} [{mark:.2f}] {subject}"
-        for subject, mark in sorted(obj.data.items(), key=lambda v: (-v[1], v[0]))
+        for subject, mark in sorted((obj.data or {}).items(), key=lambda v: (-v[1], v[0]))
     )
 
 

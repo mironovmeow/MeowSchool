@@ -69,7 +69,7 @@ async def re_auth(
         await error.session.close()
 
         await admin_log(f"Произошёл re-auth @id{peer_id}")
-        await bp.state_dispenser.set(message.peer_id, MeowState.RE_LOGIN)
+        await bp.state_dispenser.set(peer_id, MeowState.RE_LOGIN)
         await bp.api.messages.send(
             peer_id=peer_id,
             message="🚧 Произошла непредвиденная ошибка. "

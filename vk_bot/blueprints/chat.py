@@ -25,7 +25,7 @@ bp = Blueprint(name="Chat", labeler=labeler)
 @message_error_handler.catch
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
-        if message.state_peer:  # if auth  todo check logic
+        if message.state_peer:  # if auth  todo is it possible?
             chat = await Chat.get(message.peer_id)
             user_state_peer = await bp.state_dispenser.get(chat.vk_id)
             await bp.state_dispenser.set(

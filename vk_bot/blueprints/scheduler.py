@@ -27,7 +27,7 @@ class Marks:
         if state_peer:
             api: DiaryApi = state_peer.payload["api"]
             lessons_score = await api.lessons_scores(_today(), child=child.child_id)
-            ans = {}
+            ans: Dict[Marks, int] = {}
             for lesson, data in lessons_score.data.items():
                 for score in data:
                     for text, marks_list in score.marks.items():
