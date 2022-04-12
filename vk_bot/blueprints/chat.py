@@ -70,9 +70,9 @@ async def stop_command(message: Message):
             await message.answer(
                 "👋 Был рад с вами поработать\n🔒 Теперь бота можно удалить из беседы"
             )
-            chat = await Chat.get(message.peer_id)
             await bp.state_dispenser.delete(message.peer_id)
 
+            chat = await Chat.get(message.peer_id)
             if chat:
                 await chat.delete()
 
