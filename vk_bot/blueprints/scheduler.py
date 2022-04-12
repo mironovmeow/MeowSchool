@@ -24,19 +24,22 @@ class Marks:
     @classmethod
     async def from_api(cls, child: Child) -> Tuple[Dict["Marks", int], Optional[str]]:
         state_peer = await bp.state_dispenser.get(child.vk_id)
-        if state_peer:
-            api: DiaryApi = state_peer.payload["api"]
-            lessons_score = await api.lessons_scores(_today(), child=child.child_id)
-            ans: Dict[Marks, int] = {}
-            for lesson, data in lessons_score.data.items():
-                for score in data:
-                    for text, marks_list in score.marks.items():
-                        for mark_int in marks_list:
-                            marks = cls(lesson, score.date, text, mark_int)
-                            ans.setdefault(marks, 0)
-                            ans[marks] += 1
-            return ans, lessons_score.sub_period
-        return {}, None
+        if not state_peer:
+            return {}, None
+        api: DiaryApi = state_peer.payload["api"]
+        if api.closed:
+            return DATA[child]  # wait for re-auth
+
+        lessons_score = await api.lessons_scores(_today(), child=child.child_id)
+        ans: Dict[Marks, int] = {}
+        for lesson, data in lessons_score.data.items():
+            for score in data:
+                for text, marks_list in score.marks.items():
+                    for mark_int in marks_list:
+                        marks = cls(lesson, score.date, text, mark_int)
+                        ans.setdefault(marks, 0)
+                        ans[marks] += 1
+        return ans, lessons_score.sub_period
 
     def __hash__(self):
         return hash((self.lesson, self.date, self.text, self.mark))

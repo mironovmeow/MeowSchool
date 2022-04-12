@@ -4,11 +4,10 @@ Additional functions with blueprint integration (bp.state_dispenser and bp.api)
 import datetime
 import json
 from asyncio import TimeoutError
-from typing import Optional
 
 from barsdiary.aio import APIError, DiaryApi
 from vkbottle import BaseStateGroup
-from vkbottle.bot import Blueprint, Message, MessageEvent
+from vkbottle.bot import Blueprint
 from vkbottle.modules import logger
 
 from vk_bot import keyboard
@@ -45,17 +44,8 @@ async def admin_log(text: str):
         )
 
 
-async def re_auth(
-    error: APIError, message: Optional[Message] = None, event: Optional[MessageEvent] = None
-):
-    if message:
-        logger.info(f"Re-auth {message.peer_id}")
-        peer_id = message.peer_id
-    elif event:
-        logger.info(f"Re-auth {event.peer_id}")
-        peer_id = event.peer_id
-    else:
-        raise ValueError()
+async def re_auth(error: APIError, peer_id: int):
+    logger.info(f"Re-auth {peer_id}")
 
     if peer_id > 2_000_000_000:  # is chat
         await bp.api.messages.send(

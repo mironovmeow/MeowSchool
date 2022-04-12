@@ -20,7 +20,7 @@ message_error_handler = ErrorHandler(redirect_arguments=True)
 @message_error_handler.register_error_handler(APIError)
 async def message_diary(e: APIError, m: Message):
     if e.code == 401:
-        await re_auth(e, message=m)
+        await re_auth(e, m.peer_id)
 
     elif e.code >= 400:
         logger.warning(f"{e}: Server error")
@@ -78,7 +78,7 @@ callback_error_handler = ErrorHandler(redirect_arguments=True)
 @callback_error_handler.register_error_handler(APIError)
 async def callback_diary(e: APIError, event: MessageEvent):
     if e.code == 401:
-        await re_auth(e, event=event)
+        await re_auth(e, event.peer_id)
 
     elif e.code >= 400:
         logger.warning(f"{e}: Server error")
@@ -144,7 +144,7 @@ diary_date_error_handler = ErrorHandler(redirect_arguments=True)
 @diary_date_error_handler.register_error_handler(APIError)
 async def diary_date_diary(e: APIError, m: Message, args: Tuple[str]):
     if e.code == 401:
-        await re_auth(e, message=m)
+        await re_auth(e, m.peer_id)
     elif not e.json_success:
         logger.info(f"{e}: Wrong date {args[0]}")
         await m.answer("🚧 Указана неверная дата. Попробуйте ещё раз")
@@ -183,7 +183,10 @@ scheduler_error_handler = ErrorHandler(True)
 
 @scheduler_error_handler.register_error_handler(APIError)
 async def scheduler_diary(e: APIError, child: Child):
-    # todo 401 error
+    if e.code == 401:
+        await admin_log("Проблема 401 в scheduler")
+        await re_auth(e, child.vk_id)
+
     if not e.resp.ok:  # if server is not working
         return  # ignore
 
