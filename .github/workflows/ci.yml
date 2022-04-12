@@ -53,7 +53,3 @@ jobs:
 
 #      - name: Run mypy
 #        run: poetry run mypy main.py
-
-      # tests
-      - name: Run pytest
-        run: poetry run pytest
