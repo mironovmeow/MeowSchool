@@ -106,6 +106,16 @@ class Chat(Base):
     async def get(cls, peer_id) -> Optional["Chat"]:
         return await session.get(cls, peer_id)
 
+    @classmethod
+    async def create(cls, peer_id, vk_id) -> "Chat":
+        chat = cls(
+            peer_id=peer_id,
+            vk_id=vk_id,
+        )
+        session.add(chat)
+        await session.commit()
+        return chat
+
     @staticmethod
     async def count() -> int:
         return (await session.execute(select(func.count(Chat.vk_id)))).scalar_one()
