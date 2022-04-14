@@ -57,3 +57,19 @@ async def admin_marks_command(message: Message):
         f"🔸 Беседы: {await Chat.count()}\n"
         f"🔸 Уведомления: {await Child.marks_count()}"
     )
+
+
+@bp.on.message(text="!post\n\n<text>")
+async def admin_post(message: Message, text: str):
+    bad_count = 0
+    good_count = 0
+    for user in await User.get_all():
+        try:
+            await bp.api.messages.send(
+                peer_id=user.vk_id, random_id=0, message=f"🔔 Уведомление\n\n{text}"
+            )
+            good_count += 1
+        except:
+            bad_count += 1
+
+    await message.answer(f"🔸 Выполнено!\n🔸 Отправлено: {good_count}\n🔸 Не отправлено: {bad_count}")
