@@ -123,6 +123,10 @@ class Chat(Base):
         await session.commit()
         return chat
 
+    async def delete(self):
+        await session.delete(self)
+        await session.commit()
+
     @staticmethod
     async def count() -> int:
         return (await session.execute(select(func.count(Chat.vk_id)))).scalar_one()

@@ -22,7 +22,7 @@ class MeowState(BaseStateGroup):
     RE_LOGIN = -12
     RE_PASSWORD = -11
 
-    NOT_AUTH = -3  # todo logic
+    NOT_AUTH = -3  # TODO TODO TODO
     LOGIN = -2
     PASSWORD = -1
     AUTH = 1

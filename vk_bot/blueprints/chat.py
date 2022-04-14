@@ -25,31 +25,21 @@ bp = Blueprint(name="Chat", labeler=labeler)
 @message_error_handler.catch
 async def invite_handler(message: Message):
     if message.action.member_id == -message.group_id:
-        if message.state_peer:  # if auth  todo is it possible?
+        if message.state_peer:  # if auth
+            # auth again
             chat = await Chat.get(message.peer_id)
-            user_state_peer = await bp.state_dispenser.get(chat.vk_id)
-            await bp.state_dispenser.set(
-                message.peer_id,
-                MeowState.AUTH,
-                api=user_state_peer.payload["api"],
-                user_id=message.from_id,
-                child_id=0,
-            )
+            if chat:
+                await chat.delete()
 
-            await message.answer(
-                "🔓 Эта беседа уже авторизована! "
-                "Напишите /помощь (/help) для получения списка всех команд.",
-                reply_to=message.id,
-            )
-        else:
-            await message.answer(
-                "👋 Спасибо, что вы решили воспользоваться моим ботом. "
-                "🔒 Напишите /начать (/start), что бы авторизовать беседу"
-            )
+            await bp.state_dispenser.delete(message.peer_id)
+
+        await message.answer(
+            "👋 Спасибо, что вы решили воспользоваться моим ботом. "
+            "🔒 Напишите /начать (/start), что бы авторизовать беседу"
+        )
         logger.info(f"Get new chat: {message.peer_id}")
 
 
-# TODO TODO TODO TODO
 @bp.on.message(state=MeowState.NOT_AUTH)
 @message_error_handler.catch
 async def not_auth_handler(message: Message):

@@ -69,7 +69,7 @@ async def admin_post(message: Message, text: str):
                 peer_id=user.vk_id, random_id=0, message=f"🔔 Уведомление\n\n{text}"
             )
             good_count += 1
-        except:
+        except Exception:  # todo think about it
             bad_count += 1
 
     await message.answer(f"🔸 Выполнено!\n🔸 Отправлено: {good_count}\n🔸 Не отправлено: {bad_count}")
