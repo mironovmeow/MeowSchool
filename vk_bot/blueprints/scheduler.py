@@ -100,7 +100,7 @@ async def marks_job(child: Child):
                 changed_marks[mark.date][mark.lesson].append(f"❌ {mark.mark}⃣ {mark.text}")
 
     if changed_marks:
-        if len(child.user.children) > 1:
+        if await child.child_count():
             api: DiaryApi = (await bp.state_dispenser.get(child.vk_id)).payload["api"]
             name = api.user.children[child.child_id].name
             message = f"🔔 Изменения в оценках\n🧒{name}\n\n"

@@ -92,6 +92,13 @@ class Child(Base):
             )
         ).scalar_one()
 
+    async def child_count(self) -> int:
+        return (
+            await session.execute(
+                select(func.count(Child.child_id)).where(Child.vk_id == self.vk_id)
+            )
+        ).scalar_one()
+
     def __repr__(self):
         return f"Child(vk_id={self.vk_id!r}, child_id={self.child_id!r}, marks_notify=False)"
 
